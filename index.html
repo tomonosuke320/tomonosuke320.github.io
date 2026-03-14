@@ -139,12 +139,26 @@
         let currentTag = 'all';
         let searchQuery = '';
 
-        // --- Firebase Init ---
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : { apiKey: "" };
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.firestore();
-        const auth = firebase.auth();
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'travel-scrapper-default';
+        // --- Firebase Init (Resilient for Local File Use) ---
+        let db = null;
+        let auth = null;
+        let appId = 'travel-scrapper-default';
+
+        function initFirebase() {
+            try {
+                const config = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
+                if (config && config.apiKey) {
+                    firebase.initializeApp(config);
+                    db = firebase.firestore();
+                    auth = firebase.auth();
+                    appId = typeof __app_id !== 'undefined' ? __app_id : 'travel-scrapper-default';
+                } else {
+                    console.warn("Firebase config is missing or incomplete. Cloud sync will be unavailable.");
+                }
+            } catch (e) {
+                console.error("Firebase failed to initialize:", e);
+            }
+        }
 
         // --- UI Logic ---
         function render() {
@@ -162,7 +176,7 @@
             if (filtered.length === 0) {
                 container.innerHTML = `
                     <div class="col-span-full py-20 text-center text-slate-400">
-                        該当するメモが見つかりませんでした。
+                        表示するメモがありません。
                     </div>
                 `;
             } else {
@@ -186,7 +200,7 @@
                 `).join('');
             }
 
-            // タグリストの更新 (初回のみ、またはデータ変更時)
+            // タグリストの更新
             const uniqueTags = new Set();
             allMemos.forEach(m => (m.tags || []).forEach(t => uniqueTags.add(t)));
             const tagsArr = Array.from(uniqueTags).sort();
@@ -206,7 +220,7 @@
                 tagList.appendChild(btn);
             });
 
-            lucide.createIcons(); // アイコンを再描画
+            lucide.createIcons();
         }
 
         function updateTagUI() {
@@ -223,7 +237,7 @@
         }
 
         // --- Event Listeners ---
-        document.getElementById('fileInput').onchange = (e) => {
+        document.getElementById('fileInput').addEventListener('change', (e) => {
             const file = e.target.files[0];
             if (!file) return;
             const reader = new FileReader();
@@ -233,11 +247,20 @@
                     if (Array.isArray(data)) {
                         allMemos = data;
                         render();
+                    } else {
+                        alert("JSONデータの形式が配列ではありません。");
                     }
-                } catch (err) { alert("JSONファイルの形式が正しくありません。"); }
+                } catch (err) { 
+                    console.error("Parse error:", err);
+                    alert("JSONファイルの解析に失敗しました。"); 
+                }
+            };
+            reader.onerror = (err) => {
+                console.error("File reading error:", err);
+                alert("ファイルの読み込み中にエラーが発生しました。");
             };
             reader.readAsText(file);
-        };
+        });
 
         document.getElementById('searchInput').oninput = (e) => {
             searchQuery = e.target.value;
@@ -253,15 +276,21 @@
         // --- Sync Modal ---
         const syncModal = document.getElementById('syncModal');
         document.getElementById('openSyncBtn').onclick = () => {
+            if (!auth) {
+                alert("クラウド同期機能は現在利用できません（Firebaseが設定されていません）。");
+                return;
+            }
             auth.signInAnonymously().then(() => {
                 syncModal.classList.remove('hidden');
+            }).catch(e => {
+                alert("認証エラーが発生しました。");
             });
         };
         document.getElementById('closeSyncBtn').onclick = () => syncModal.classList.add('hidden');
 
         document.getElementById('syncSubmitBtn').onclick = async () => {
             const code = document.getElementById('syncCodeInput').value.trim();
-            if (!code) return;
+            if (!code || !db) return;
             
             const btn = document.getElementById('syncSubmitBtn');
             btn.disabled = true;
@@ -279,7 +308,7 @@
                     alert("共有コードが見つかりませんでした。");
                 }
             } catch (err) {
-                alert("通信エラーが発生しました。");
+                alert("同期に失敗しました。");
             } finally {
                 btn.disabled = false;
                 btn.innerHTML = `<i data-lucide="cloud-download" size="20"></i> 同期を開始`;
@@ -298,7 +327,10 @@
         lightbox.onclick = (e) => { if (e.target === lightbox) lightbox.classList.add('hidden'); };
 
         // --- Init ---
-        window.onload = () => lucide.createIcons();
+        window.onload = () => {
+            initFirebase();
+            lucide.createIcons();
+        };
     </script>
 </body>
 </html>
