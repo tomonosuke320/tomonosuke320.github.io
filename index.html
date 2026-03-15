@@ -9,6 +9,9 @@
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
     
+    <!-- 大容量データベース（IndexedDB）を簡単に扱うためのライブラリを追加 -->
+    <script src="https://cdn.jsdelivr.net/npm/idb-keyval@6/dist/umd.js"></script>
+    
     <!-- Google API Loader -->
     <script async defer src="https://apis.google.com/js/api.js"></script>
     <script async defer src="https://accounts.google.com/gsi/client"></script>
@@ -54,7 +57,7 @@
                 <div>
                     <!-- ★ バージョン番号を追加 -->
                     <h1 class="text-lg font-black text-slate-800 tracking-tight flex items-center gap-2">
-                        Travel Scrapper <span class="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200">v1.3.1</span>
+                        Travel Scrapper <span class="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200">v1.4.0</span>
                     </h1>
                     <p class="text-[10px] text-blue-600 font-bold uppercase tracking-widest">Web Viewer</p>
                 </div>
@@ -207,47 +210,59 @@
         let accessToken = null;
         let gapiInited = false;
         let gisInited = false;
-        let actionAfterAuth = null; // 'sync' or 'picker'
+        let actionAfterAuth = null;
 
-        // --- トークン＆キャッシュの管理（再ログインを避ける） ---
-        function loadToken() {
-            const saved = localStorage.getItem('gapi_access_token');
-            const expiry = localStorage.getItem('gapi_token_expiry');
-            // 有効期限が切れていなければ再利用（GISのトークンは約1時間有効）
-            if (saved && expiry && Date.now() < parseInt(expiry)) {
-                accessToken = saved;
-            } else {
-                accessToken = null;
-                localStorage.removeItem('gapi_access_token');
-                localStorage.removeItem('gapi_token_expiry');
-            }
+        // --- ★容量制限を解決したキャッシュ管理（IndexedDBを使用） ---
+        async function loadToken() {
+            try {
+                const saved = await idbKeyval.get('gapi_access_token');
+                const expiry = await idbKeyval.get('gapi_token_expiry');
+                if (saved && expiry && Date.now() < parseInt(expiry)) {
+                    accessToken = saved;
+                } else {
+                    accessToken = null;
+                    await idbKeyval.del('gapi_access_token');
+                    await idbKeyval.del('gapi_token_expiry');
+                }
+            } catch (e) { console.error("Token load error", e); }
         }
 
-        function saveToken(token) {
+        async function saveToken(token) {
             accessToken = token;
-            localStorage.setItem('gapi_access_token', token);
-            // 現在時刻から約50分(3000秒)後に期限切れとみなす
-            localStorage.setItem('gapi_token_expiry', Date.now() + 3000 * 1000);
+            try {
+                await idbKeyval.set('gapi_access_token', token);
+                await idbKeyval.set('gapi_token_expiry', Date.now() + 3000 * 1000); // 約50分保持
+            } catch (e) { console.error("Token save error", e); }
         }
 
-        function loadCache() {
-            const cachedMemos = localStorage.getItem('travelMemos_cache');
-            if (cachedMemos) {
-                try { allMemos = JSON.parse(cachedMemos); } catch(e) { console.error(e); }
-            }
-            currentDriveFileId = localStorage.getItem('driveFileId_cache');
-            updateDriveButtonState();
-            if (allMemos.length > 0) render();
+        async function loadCache() {
+            try {
+                const cachedMemos = await idbKeyval.get('travelMemos_cache');
+                if (cachedMemos) {
+                    allMemos = cachedMemos;
+                }
+                const cachedDriveFileId = await idbKeyval.get('driveFileId_cache');
+                if (cachedDriveFileId) {
+                    currentDriveFileId = cachedDriveFileId;
+                }
+                updateDriveButtonState();
+                if (allMemos.length > 0) render();
+            } catch(e) { console.error("Cache load error", e); }
         }
 
-        function saveCache() {
-            localStorage.setItem('travelMemos_cache', JSON.stringify(allMemos));
-            if (currentDriveFileId) {
-                localStorage.setItem('driveFileId_cache', currentDriveFileId);
-            } else {
-                localStorage.removeItem('driveFileId_cache');
+        async function saveCache() {
+            try {
+                await idbKeyval.set('travelMemos_cache', allMemos);
+                if (currentDriveFileId) {
+                    await idbKeyval.set('driveFileId_cache', currentDriveFileId);
+                } else {
+                    await idbKeyval.del('driveFileId_cache');
+                }
+                updateDriveButtonState();
+            } catch (e) {
+                console.error("Cache save error", e);
+                alert("ローカルキャッシュの保存に失敗しました。端末の空き容量を確認してください。");
             }
-            updateDriveButtonState();
         }
 
         function updateDriveButtonState() {
@@ -265,7 +280,6 @@
             try {
                 if (typeof gapi !== 'undefined') {
                     gapi.load('client:picker', async () => {
-                        // Pickerのためだけにgapi.clientを使う（fetchで通信するため）
                         await gapi.client.init({ apiKey: API_KEY, discoveryDocs: DISCOVERY_DOCS });
                         gapiInited = true;
                         checkStatus();
@@ -285,8 +299,8 @@
                                 }
                                 return;
                             }
-                            // ★トークンを保存して次回以降のログインプロンプトをスキップ
-                            saveToken(resp.access_token);
+                            // トークンを安全な領域に保存
+                            await saveToken(resp.access_token);
                             executeDriveAction();
                         },
                     });
@@ -302,32 +316,29 @@
             }
         }
 
-        // 「同期」または「開く」ボタン
-        document.getElementById('driveSyncBtn').onclick = () => {
+        // 「同期」ボタン
+        document.getElementById('driveSyncBtn').onclick = async () => {
             if (!isConfigValid()) {
                 alert("Google Driveと連携するには、config.js に設定を記入してください。");
                 return;
             }
             actionAfterAuth = currentDriveFileId ? 'sync' : 'picker';
             
-            // 保存済みのトークンをチェック
-            loadToken();
+            await loadToken();
             
             if (!accessToken) {
-                // トークンがない場合だけ、空のpromptで要求（アカウント選択が出ない設定）
                 tokenClient.requestAccessToken({prompt: ''}); 
             } else {
-                // すでにトークンがあればそのまま実行
                 executeDriveAction();
             }
         };
 
         // 「別のファイルを選択」ボタン
-        document.getElementById('drivePickerBtn').onclick = () => {
+        document.getElementById('drivePickerBtn').onclick = async () => {
             if (!isConfigValid()) return;
             actionAfterAuth = 'picker';
             
-            loadToken();
+            await loadToken();
             if (!accessToken) {
                 tokenClient.requestAccessToken({prompt: ''});
             } else {
@@ -343,8 +354,7 @@
             }
         }
 
-        // --- ★より安定した Fetch API による通信 ---
-        // Pickerでファイルを選択
+        // --- ★通信処理の安定化（Fetch API） ---
         function createPicker() {
             const picker = new google.picker.PickerBuilder()
                 .addView(new google.picker.DocsView(google.picker.ViewId.DOCS).setMimeTypes('application/json'))
@@ -353,7 +363,7 @@
                 .setCallback(async (data) => {
                     if (data.action === google.picker.Action.PICKED) {
                         currentDriveFileId = data.docs[0].id; 
-                        saveCache(); 
+                        await saveCache(); 
                         fetchDriveData(currentDriveFileId); 
                     }
                 })
@@ -361,7 +371,6 @@
             picker.setVisible(true);
         }
 
-        // Driveから直接データを取得（安定した fetch を使用）
         async function fetchDriveData(fileId) {
             const btn = document.getElementById('driveSyncBtn');
             const originalHtml = btn.innerHTML;
@@ -369,13 +378,13 @@
             if (typeof lucide !== 'undefined') lucide.createIcons();
 
             try {
-                // gapi.client ではなく直接 fetch する
+                // 確実に通信できる標準的な方法を使用
                 const response = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, {
                     headers: { 'Authorization': `Bearer ${accessToken}` }
                 });
 
                 if (!response.ok) {
-                    throw new Error(`HTTPエラー: ${response.status} (アクセス権限がないか、トークンの期限切れです)`);
+                    throw new Error(`アクセス権限がないか、セッションが切れました (HTTP ${response.status})`);
                 }
 
                 const data = await response.json();
@@ -383,7 +392,7 @@
                 if (Array.isArray(data)) {
                     allMemos = data;
                     currentDriveFileId = fileId;
-                    saveCache();
+                    await saveCache();
                     render();
                 } else {
                     throw new Error("データが正しいJSON配列形式ではありません。");
@@ -391,16 +400,16 @@
             } catch (e) {
                 console.error("Fetch error:", e);
                 alert("同期に失敗しました。\n詳細: " + e.message);
-                // エラーになった場合、トークンが切れているかもしれないので破棄
+                // エラー時はトークンを破棄して次回再ログインさせる
                 accessToken = null;
-                localStorage.removeItem('gapi_access_token');
+                await idbKeyval.del('gapi_access_token');
+                await idbKeyval.del('gapi_token_expiry');
             } finally {
                 btn.innerHTML = originalHtml;
                 if (typeof lucide !== 'undefined') lucide.createIcons();
             }
         }
 
-        // ドライブのファイルを更新（安定した fetch を使用）
         async function updateDriveFile() {
             if (!currentDriveFileId || !accessToken) return false;
             
@@ -529,7 +538,7 @@
 
         // --- 新規メモ追加 / 編集 の準備 ---
         document.getElementById('fabAdd').onclick = () => {
-            editingMemoId = null; // 新規追加モード
+            editingMemoId = null; 
             document.getElementById('modalTitle').textContent = '新しいメモを追加';
             
             document.getElementById('addTitle').value = '';
@@ -626,14 +635,14 @@
                 if (typeof lucide !== 'undefined') lucide.createIcons();
 
                 if (success) {
-                    saveCache();
+                    await saveCache();
                     document.getElementById('addModal').classList.add('hidden');
                     render();
                 } else {
                     allMemos = backupMemos; 
                 }
             } else {
-                saveCache();
+                await saveCache();
                 document.getElementById('addModal').classList.add('hidden');
                 render();
             }
@@ -698,15 +707,14 @@
                 if (typeof lucide !== 'undefined') lucide.createIcons();
 
                 if (success) {
-                    saveCache();
+                    await saveCache();
                     document.getElementById('addModal').classList.add('hidden');
                     render(); 
                 } else {
                     allMemos = backupMemos; 
                 }
             } else {
-                // ローカルのみの場合もキャッシュに保存
-                saveCache();
+                await saveCache();
                 document.getElementById('addModal').classList.add('hidden');
                 render();
             }
@@ -795,13 +803,13 @@
             const file = e.target.files[0];
             if (!file) return;
             const reader = new FileReader();
-            reader.onload = (event) => {
+            reader.onload = async (event) => {
                 try {
                     const data = JSON.parse(event.target.result);
                     if (Array.isArray(data)) { 
                         allMemos = data; 
                         currentDriveFileId = null; 
-                        saveCache(); 
+                        await saveCache(); 
                         render(); 
                     }
                 } catch (err) { alert("JSON形式が正しくありません。"); }
@@ -819,9 +827,15 @@
         };
 
         // 起動時の処理
-        window.addEventListener('load', () => {
-            loadToken(); // トークンを復元
-            loadCache(); // キャッシュを読み込んで即座に表示
+        window.addEventListener('load', async () => {
+            // クラッシュの原因になっていた古いlocalStorageのデータを掃除
+            localStorage.removeItem('travelMemos_cache');
+            localStorage.removeItem('driveFileId_cache');
+            localStorage.removeItem('gapi_access_token');
+            localStorage.removeItem('gapi_token_expiry');
+
+            await loadToken(); 
+            await loadCache(); 
             tryInitGoogleApi();
             if (typeof lucide !== 'undefined') lucide.createIcons();
         });
