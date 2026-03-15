@@ -4,12 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Travel Scrapper Viewer</title>
-    <!-- Tailwind CSS: デザイン用 -->
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Lucide Icons: アイコン -->
+    <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
     
-    <!-- Google API Loader: ドライブ連携用 -->
+    <!-- Google API Loader -->
     <script async defer src="https://apis.google.com/js/api.js"></script>
     <script async defer src="https://accounts.google.com/gsi/client"></script>
 
@@ -19,7 +19,6 @@
             font-family: 'Noto Sans JP', sans-serif; 
             background-color: #f1f5f9;
         }
-        /* メモをタイル状に並べる設定 */
         .memo-grid {
             column-count: 1;
             column-gap: 1.5rem;
@@ -56,12 +55,12 @@
             </div>
             <div class="flex gap-2">
                 <!-- Googleドライブボタン -->
-                <button id="driveBtn" class="flex items-center gap-2 px-4 py-2 bg-green-50 text-green-700 rounded-xl hover:bg-green-100 transition-all font-bold text-sm opacity-50 shadow-sm">
+                <button id="driveBtn" class="flex items-center gap-2 px-4 py-2 bg-green-50 text-green-700 rounded-xl hover:bg-green-100 transition-all font-bold text-sm opacity-50 shadow-sm" title="Googleドライブから開く">
                     <i data-lucide="database" size="18"></i>
                     <span class="hidden sm:inline">Driveから開く</span>
                 </button>
                 <!-- ローカルファイルボタン -->
-                <label class="flex items-center gap-2 px-4 py-2 bg-slate-800 text-white rounded-xl hover:bg-slate-700 cursor-pointer shadow-md transition-transform active:scale-95 font-bold text-sm">
+                <label class="flex items-center gap-2 px-4 py-2 bg-slate-800 text-white rounded-xl hover:bg-slate-700 cursor-pointer shadow-md transition-transform active:scale-95 font-bold text-sm" title="ローカルファイルを開く">
                     <i data-lucide="upload" size="18"></i>
                     <span class="hidden sm:inline">ファイル読込</span>
                     <input type="file" id="fileInput" accept=".json" class="hidden" />
@@ -102,6 +101,49 @@
         </div>
     </main>
 
+    <!-- ★常に表示されるフローティングアクションボタン (メモ追加) -->
+    <button id="fabAdd" class="fixed bottom-6 right-6 w-14 h-14 bg-blue-600 text-white rounded-full shadow-lg shadow-blue-300 flex items-center justify-center hover:bg-blue-700 transition-transform active:scale-90 z-50">
+        <i data-lucide="plus" size="28"></i>
+    </button>
+
+    <!-- 追加・編集モーダル -->
+    <div id="addModal" class="fixed inset-0 z-[60] hidden flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+        <div class="bg-white w-full max-w-md rounded-[2rem] p-6 shadow-2xl modal-enter max-h-[90vh] overflow-y-auto no-scrollbar">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-black text-slate-800">新しいメモを追加</h2>
+                <button id="closeAddModalBtn" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" size="24"></i></button>
+            </div>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-1 ml-1">タイトル <span class="text-red-500">*</span></label>
+                    <input type="text" id="addTitle" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none" placeholder="例：絶景カフェ">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-1 ml-1">URL (任意)</label>
+                    <input type="url" id="addUrl" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none" placeholder="https://...">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-1 ml-1">メモ (任意)</label>
+                    <textarea id="addText" rows="3" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none resize-none" placeholder="ここに行きたい！"></textarea>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-1 ml-1">画像URL (任意)</label>
+                    <input type="url" id="addImage" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none" placeholder="https://.../image.jpg">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-1 ml-1">タグ (カンマ区切りで複数可)</label>
+                    <input type="text" id="addTags" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none" placeholder="カフェ, 東京">
+                </div>
+                
+                <button id="saveNewMemoBtn" class="w-full py-4 mt-2 bg-blue-600 text-white rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-blue-700 active:scale-95 transition-all shadow-md shadow-blue-200">
+                    <i data-lucide="save" size="20"></i>
+                    保存してGoogleドライブを更新
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- 画像拡大用ライトボックス -->
     <div id="lightbox" class="fixed inset-0 z-[100] hidden bg-black/95 flex items-center justify-center p-4 cursor-zoom-out" onclick="this.classList.add('hidden')">
         <img id="lightboxImg" src="" class="max-w-full max-h-full rounded shadow-2xl" />
@@ -113,12 +155,15 @@
         let allMemos = [];
         let currentTag = 'all';
         let searchQuery = '';
+        let currentDriveFileId = null; // 現在開いているGoogle DriveのファイルID
 
-        // --- Google Drive 設定 (ここに自分自身の情報を入れてください) ---
-        const CLIENT_ID = '197171881671-2cei9fbci402sh1369k78kq7vd4vqkpl.apps.googleusercontent.com'; 
-        const API_KEY = 'AIzaSyA3xblejmOFIxZhBHoMwBaM5gGvufS0p6Y';
+        // --- Google Drive 設定 ---
+        const CLIENT_ID = ''; // ★ここに設定
+        const API_KEY = '';   // ★ここに設定
+        
+        // アプリで開いたファイルを編集できる権限
         const DISCOVERY_DOCS = ["https://www.googleapis.com/discovery/v1/apis/drive/v3/rest"];
-        const SCOPES = "https://www.googleapis.com/auth/drive.readonly";
+        const SCOPES = "https://www.googleapis.com/auth/drive.file";
 
         let tokenClient;
         let accessToken = null;
@@ -127,7 +172,10 @@
 
         // --- Google Drive 連携ロジック ---
         async function tryInitGoogleApi() {
-            if (!API_KEY || !CLIENT_ID) return;
+            if (!API_KEY || !CLIENT_ID) {
+                console.warn("CLIENT_ID or API_KEY is missing.");
+                return;
+            }
             try {
                 if (typeof gapi !== 'undefined') {
                     gapi.load('client:picker', async () => {
@@ -141,7 +189,10 @@
                         client_id: CLIENT_ID,
                         scope: SCOPES,
                         callback: async (resp) => {
-                            if (resp.error !== undefined) throw (resp);
+                            if (resp.error !== undefined) {
+                                console.error("Auth Error:", resp);
+                                return;
+                            }
                             accessToken = resp.access_token;
                             createPicker();
                         },
@@ -154,7 +205,8 @@
 
         function checkStatus() {
             if (gapiInited && gisInited) {
-                document.getElementById('driveBtn').classList.remove('opacity-50');
+                const btn = document.getElementById('driveBtn');
+                if (btn) btn.classList.remove('opacity-50');
             }
         }
 
@@ -164,6 +216,7 @@
                 return;
             }
             if (!accessToken) {
+                // 初回は同意画面を表示してトークンを取得
                 tokenClient.requestAccessToken({prompt: 'consent'});
             } else {
                 createPicker();
@@ -177,17 +230,131 @@
                 .setDeveloperKey(API_KEY)
                 .setCallback(async (data) => {
                     if (data.action === google.picker.Action.PICKED) {
-                        const fileId = data.docs[0].id;
-                        const resp = await gapi.client.drive.files.get({ fileId, alt: 'media' });
-                        if (Array.isArray(resp.result)) {
-                            allMemos = resp.result;
-                            render();
+                        currentDriveFileId = data.docs[0].id; // 選択したファイルIDを保持
+                        try {
+                            const resp = await gapi.client.drive.files.get({ fileId: currentDriveFileId, alt: 'media' });
+                            if (Array.isArray(resp.result)) {
+                                allMemos = resp.result;
+                                render();
+                            } else {
+                                alert("ファイルの中身が正しい形式の旅行メモではありません。");
+                            }
+                        } catch (e) {
+                            console.error("File download error:", e);
+                            alert("ファイルの取得に失敗しました。アクセス権限を確認してください。");
                         }
                     }
                 })
                 .build();
             picker.setVisible(true);
         }
+
+        // --- ドライブのファイルを更新（上書き保存）するロジック ---
+        async function updateDriveFile() {
+            if (!currentDriveFileId || !accessToken) {
+                alert("Googleドライブのファイルが選択されていません。");
+                return false;
+            }
+
+            const content = JSON.stringify(allMemos, null, 2);
+            
+            try {
+                // PATCHリクエストで内容を上書き
+                const request = gapi.client.request({
+                    path: '/upload/drive/v3/files/' + currentDriveFileId,
+                    method: 'PATCH',
+                    params: { uploadType: 'media' },
+                    body: content
+                });
+                
+                await new Promise((resolve, reject) => {
+                    request.execute(function(resp) {
+                        if (resp && resp.error) reject(resp.error);
+                        else resolve(resp);
+                    });
+                });
+                return true;
+            } catch (err) {
+                console.error("Upload error:", err);
+                alert("Googleドライブへの保存に失敗しました。");
+                return false;
+            }
+        }
+
+        // --- ★新規メモ追加ロジック ---
+        document.getElementById('fabAdd').onclick = () => {
+            // ドライブのファイルを読み込んでいない場合は追加をブロック
+            if (!currentDriveFileId) {
+                alert("新しいメモを追加するには、まず上部の「Driveから開く」ボタンから、Googleドライブ上の旅行メモデータ(JSON)を読み込んでください。\n\n※「ファイル読込(ローカル)」から開いた場合は上書き保存できません。");
+                return;
+            }
+            
+            // フォームの初期化
+            document.getElementById('addTitle').value = '';
+            document.getElementById('addUrl').value = '';
+            document.getElementById('addText').value = '';
+            document.getElementById('addImage').value = '';
+            document.getElementById('addTags').value = '';
+            document.getElementById('addModal').classList.remove('hidden');
+        };
+
+        document.getElementById('closeAddModalBtn').onclick = () => {
+            document.getElementById('addModal').classList.add('hidden');
+        };
+
+        document.getElementById('saveNewMemoBtn').onclick = async () => {
+            const title = document.getElementById('addTitle').value.trim();
+            if (!title) {
+                alert("タイトルは必須です。");
+                return;
+            }
+
+            const url = document.getElementById('addUrl').value.trim();
+            const text = document.getElementById('addText').value.trim();
+            const image = document.getElementById('addImage').value.trim();
+            const tagsInput = document.getElementById('addTags').value.trim();
+            
+            // タグの処理 (カンマ区切りを配列に変換)
+            let tags = [];
+            if (tagsInput) {
+                tags = tagsInput.split(',').map(t => t.trim()).filter(t => t.length > 0);
+            }
+
+            const newMemo = {
+                id: "manual-" + Date.now(),
+                url: url,
+                title: title,
+                text: text,
+                image: image,
+                tags: tags,
+                timestamp: new Date().toISOString()
+            };
+
+            // 配列の先頭に追加
+            allMemos.unshift(newMemo);
+            
+            // ボタンをローディング状態に
+            const btn = document.getElementById('saveNewMemoBtn');
+            const originalBtnHtml = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = `<i data-lucide="refresh-cw" class="animate-spin" size="20"></i> 保存中...`;
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+
+            // ドライブを更新
+            const success = await updateDriveFile();
+
+            btn.disabled = false;
+            btn.innerHTML = originalBtnHtml;
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+
+            if (success) {
+                document.getElementById('addModal').classList.add('hidden');
+                render(); // 画面を更新
+            } else {
+                // 失敗した場合は追加したものを戻す
+                allMemos.shift();
+            }
+        };
 
         // --- 画面描画ロジック ---
         function render() {
@@ -204,20 +371,18 @@
             if (allMemos.length === 0) return;
 
             container.innerHTML = filtered.length === 0 
-                ? `<div class="col-span-full py-20 text-center text-slate-400 font-medium">該当するメモがありません。</div>`
+                ? `<div class="col-span-full py-20 text-center text-slate-400 font-medium animate-pulse">該当するメモがありません。</div>`
                 : filtered.map(m => `
                     <div class="memo-item bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300">
                         ${m.image ? `<img src="${m.image}" class="w-full h-auto cursor-zoom-in block" onclick="event.stopPropagation(); openLightbox('${m.image}')" loading="lazy">` : ''}
                         <div class="p-5">
                             <h3 class="font-bold text-slate-800 leading-tight mb-3 text-lg">${m.title || '無題のメモ'}</h3>
-                            <div class="bg-blue-50/50 text-blue-800 text-sm p-3.5 rounded-2xl border-l-4 border-blue-500 italic mb-4 whitespace-pre-wrap leading-relaxed">${m.text || ''}</div>
+                            ${m.text ? `<div class="bg-blue-50/50 text-blue-800 text-sm p-3.5 rounded-2xl border-l-4 border-blue-500 italic mb-4 whitespace-pre-wrap leading-relaxed">${m.text}</div>` : ''}
                             <div class="flex flex-wrap gap-1.5 mb-4">
                                 ${(m.tags || []).map(t => `<span class="px-2 py-0.5 bg-slate-100 text-slate-500 text-[10px] rounded font-bold uppercase tracking-wider">#${t}</span>`).join('')}
                             </div>
                             <div class="flex justify-between items-center pt-4 border-t border-slate-50">
-                                <a href="${m.url}" target="_blank" class="text-blue-600 text-xs font-bold flex items-center gap-1.5 hover:underline">
-                                    <i data-lucide="external-link" size="14"></i> サイトを見る
-                                </a>
+                                ${m.url ? `<a href="${m.url}" target="_blank" class="text-blue-600 text-xs font-bold flex items-center gap-1.5 hover:underline"><i data-lucide="external-link" size="14"></i> サイトを見る</a>` : '<span></span>'}
                                 <span class="text-[10px] text-slate-300 font-bold">${m.timestamp ? new Date(m.timestamp).toLocaleDateString() : ''}</span>
                             </div>
                         </div>
@@ -261,7 +426,12 @@
             reader.onload = (event) => {
                 try {
                     const data = JSON.parse(event.target.result);
-                    if (Array.isArray(data)) { allMemos = data; render(); }
+                    if (Array.isArray(data)) { 
+                        allMemos = data; 
+                        // ローカルファイル読込時はDriveのIDをリセットする（上書き保存させないため）
+                        currentDriveFileId = null; 
+                        render(); 
+                    }
                 } catch (err) { alert("JSON形式が正しくありません。"); }
             };
             reader.readAsText(file);
