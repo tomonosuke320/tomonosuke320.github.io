@@ -55,9 +55,9 @@
                     <i data-lucide="globe" size="24"></i>
                 </div>
                 <div>
-                    <!-- ★ バージョン番号を v1.5.2 に更新 -->
+                    <!-- ★ バージョン番号を v1.5.3 に更新 -->
                     <h1 class="text-lg font-black text-slate-800 tracking-tight flex items-center gap-2">
-                        Travel Scrapper <span class="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200">v1.5.2</span>
+                        Travel Scrapper <span class="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200">v1.5.3</span>
                     </h1>
                     <p class="text-[10px] text-blue-600 font-bold uppercase tracking-widest">Web Viewer</p>
                 </div>
@@ -138,7 +138,6 @@
             </div>
             
             <div class="space-y-4">
-                <!-- ★ 各入力欄にクリアボタン（x-circle）を追加 -->
                 <div>
                     <label class="block text-xs font-bold text-slate-500 mb-1 ml-1">タイトル <span class="text-red-500">*</span></label>
                     <div class="relative">
@@ -185,7 +184,6 @@
                             <span id="imageFileName" class="text-xs text-slate-500 truncate max-w-[150px]"></span>
                         </div>
                         
-                        <!-- ★ 画像プレビューエリアと画像削除ボタン -->
                         <div id="previewContainer" class="relative hidden mt-2">
                             <img id="imagePreview" src="" class="w-full h-32 object-cover rounded-xl border border-slate-200">
                             <button type="button" id="clearPreviewBtn" class="absolute top-2 right-2 p-1.5 bg-slate-900/50 hover:bg-slate-900/80 text-white rounded-full transition-colors backdrop-blur-sm shadow-md" title="この画像を削除">
@@ -249,7 +247,6 @@
         let gisInited = false;
         let actionAfterAuth = null;
 
-        // ★ 入力欄のクリア（×）ボタンの設定
         function setupClearButtons() {
             const fields = ['addTitle', 'addUrl', 'addText', 'addImageUrl', 'addTags'];
             fields.forEach(id => {
@@ -257,33 +254,27 @@
                 const btn = document.getElementById(`clear_${id}`);
                 if (!input || !btn) return;
 
-                // 入力がある時だけ×ボタンを表示
                 input.addEventListener('input', () => {
                     btn.classList.toggle('hidden', input.value.length === 0);
                 });
 
-                // ×ボタンを押したときの処理
                 btn.addEventListener('click', () => {
                     input.value = '';
                     btn.classList.add('hidden');
                     
                     if (id === 'addImageUrl') {
-                        // URLを消した時、アップロード画像がなければプレビューも消す
                         if (!uploadedImageDataUrl) {
                             document.getElementById('previewContainer').classList.add('hidden');
                             document.getElementById('imagePreview').src = '';
                         }
                     } else if (id === 'addTags') {
-                        // タグを消したら、青色になっていた候補ボタンの色もリセット
                         updateTagChipStyles();
                     }
-                    
-                    input.focus(); // 消した後にすぐ入力できるようにフォーカスを当てる
+                    input.focus(); 
                 });
             });
         }
 
-        // モーダルを開いた時に×ボタンの表示状態を一括更新する
         function updateClearButtonsVisibility() {
             const fields = ['addTitle', 'addUrl', 'addText', 'addImageUrl', 'addTags'];
             fields.forEach(id => {
@@ -295,7 +286,6 @@
             });
         }
 
-        // プレビュー画像の「削除」ボタンの処理
         document.getElementById('clearPreviewBtn').onclick = () => {
             document.getElementById('addImageUrl').value = '';
             document.getElementById('addImageFile').value = '';
@@ -308,7 +298,6 @@
             if (clearUrlBtn) clearUrlBtn.classList.add('hidden');
         };
 
-        // データの完全クリア機能
         async function clearAllData() {
             if(!confirm("【警告】ローカルのキャッシュ（一時データ）をすべて消去して、アプリを初期状態に戻しますか？\n※Googleドライブ上のファイルは消えません。")) return;
             allMemos = [];
@@ -321,7 +310,6 @@
         }
         document.getElementById('clearDataBtn').onclick = clearAllData;
 
-        // ログアウト処理
         async function logout() {
             if(!confirm("ログアウトして認証情報をクリアしますか？")) return;
             await idbKeyval.del('gapi_access_token');
@@ -343,7 +331,7 @@
         async function saveToken(token) {
             accessToken = token;
             await idbKeyval.set('gapi_access_token', token);
-            await idbKeyval.set('gapi_token_expiry', Date.now() + 3000 * 1000); // 約50分
+            await idbKeyval.set('gapi_token_expiry', Date.now() + 3000 * 1000); 
             updateDriveButtonState();
         }
 
@@ -531,7 +519,6 @@
             }
         }
 
-        // ファイルアップロード時にプレビューを表示
         document.getElementById('addImageFile').onchange = (e) => {
             const file = e.target.files[0]; if (!file) return;
             const reader = new FileReader();
@@ -555,7 +542,6 @@
             reader.readAsDataURL(file);
         };
 
-        // URL入力時にプレビューを表示
         document.getElementById('addImageUrl').addEventListener('input', (e) => {
             const url = e.target.value.trim();
             if (url) {
@@ -586,7 +572,7 @@
                     if (cur.includes(tag)) cur = cur.filter(t => t !== tag); else cur.push(tag);
                     input.value = cur.join(', ');
                     updateTagChipStyles();
-                    updateClearButtonsVisibility(); // ×ボタンの表示を更新
+                    updateClearButtonsVisibility(); 
                 };
                 container.appendChild(btn);
             });
@@ -682,7 +668,6 @@
                 timestamp: new Date().toISOString()
             };
             
-            // もし画像プレビューが明示的に消されていたら image は空にする
             if(document.getElementById('previewContainer').classList.contains('hidden')){
                 newMemo.image = null;
             }
@@ -706,6 +691,7 @@
             btn.disabled = false; btnText.textContent = originalText;
         };
 
+        // ★ リンク表示を復活させた render 関数
         function render() {
             const container = document.getElementById('memoContainer');
             const filtered = allMemos.filter(m => {
@@ -723,12 +709,21 @@
                         <div class="flex flex-wrap gap-1.5 mb-4">
                             ${(m.tags || []).map(t => `<span class="px-2 py-0.5 bg-slate-100 text-slate-500 text-[10px] rounded">#${t}</span>`).join('')}
                         </div>
+                        
+                        <!-- ★ ここにURLリンクと日付の表示を復活させました -->
                         <div class="flex justify-between items-center pt-4 border-t border-slate-50 mt-auto">
-                            <button onclick="editMemo('${m.id}')" class="text-slate-400 hover:text-blue-600"><i data-lucide="pencil" size="16"></i></button>
+                            ${m.url ? `<a href="${m.url}" target="_blank" class="text-blue-600 text-xs font-bold flex items-center gap-1.5 hover:underline"><i data-lucide="external-link" size="14"></i> サイトを見る</a>` : '<span></span>'}
+                            <div class="flex items-center gap-3">
+                                <button onclick="editMemo('${m.id}')" class="text-slate-400 hover:text-blue-600 transition-colors" title="編集">
+                                    <i data-lucide="pencil" size="16"></i>
+                                </button>
+                                <span class="text-[10px] text-slate-300 font-bold">${m.timestamp ? new Date(m.timestamp).toLocaleDateString() : ''}</span>
+                            </div>
                         </div>
                     </div>
                 </div>
             `).join('');
+            
             const tags = new Set(); allMemos.forEach(m => (m.tags || []).forEach(t => tags.add(t)));
             document.querySelectorAll('.dynamic-tag').forEach(c => c.remove());
             Array.from(tags).sort().forEach(tag => {
