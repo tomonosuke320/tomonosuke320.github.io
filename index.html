@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Travel Scrapper</title>
     
-    <!-- タブのアイコン (SVG) -->
+    <!-- タブのアイコン (飛行機SVG) -->
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2003/svg' viewBox='0 0 24 24' fill='none' stroke='%232563eb' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M17.8 19.2L16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z'/></svg>">
 
     <!-- Tailwind CSS -->
@@ -13,14 +13,14 @@
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
     
-    <!-- 大容量データベース（IndexedDB）ライブラリ -->
+    <!-- IndexedDB Library -->
     <script src="https://cdn.jsdelivr.net/npm/idb-keyval@6/dist/umd.js"></script>
     
     <!-- Google API Loader -->
     <script async defer src="https://apis.google.com/js/api.js"></script>
     <script async defer src="https://accounts.google.com/gsi/client"></script>
 
-    <!-- 分離した設定ファイル(config.js)の読み込み -->
+    <!-- config.js -->
     <script src="config.js" onerror="console.warn('config.js が見つかりません。')"></script>
 
     <style>
@@ -51,9 +51,10 @@
 </head>
 <body class="text-slate-900 pb-20">
 
-    <!-- ナビゲーションバー -->
+    <!-- ナビゲーションバー (二段構成) -->
     <nav class="bg-white/90 backdrop-blur-md border-b border-slate-200 sticky top-0 z-40 shadow-sm">
         <div class="max-w-6xl mx-auto px-4 py-3">
+            <!-- 一段目: ロゴと同期ボタン -->
             <div class="flex justify-between items-center mb-4">
                 <div class="flex items-center gap-3">
                     <div class="w-11 h-11 bg-blue-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-blue-200 rotate-[-10deg]">
@@ -61,7 +62,7 @@
                     </div>
                     <div>
                         <h1 class="text-lg font-black text-slate-800 tracking-tight leading-none mb-1">Travel Scrapper</h1>
-                        <p class="text-[10px] text-blue-600 font-bold uppercase tracking-[0.2em]">Web Viewer v1.6.2</p>
+                        <p class="text-[10px] text-blue-600 font-bold uppercase tracking-[0.2em]">Web Viewer v1.6.3</p>
                     </div>
                 </div>
 
@@ -71,14 +72,15 @@
                 </button>
             </div>
 
+            <!-- 二段目: 管理系アクション -->
             <div class="flex flex-wrap items-center gap-2">
                 <div class="flex items-center gap-1 p-1 bg-slate-50 rounded-xl border border-slate-100">
-                    <button id="drivePickerBtn" class="flex items-center gap-1.5 px-3 py-2 text-green-700 font-bold text-xs hover:bg-white rounded-lg transition-colors">
+                    <button id="drivePickerBtn" class="flex items-center gap-1.5 px-3 py-2 text-green-700 font-bold text-xs hover:bg-white rounded-lg transition-colors" title="Googleドライブから選択">
                         <i data-lucide="folder-open" size="16"></i>
                         <span>ファイル選択</span>
                     </button>
                     <div class="w-px h-4 bg-slate-200"></div>
-                    <label for="fileInput" class="flex items-center gap-1.5 px-3 py-2 text-slate-600 font-bold text-xs hover:bg-white rounded-lg transition-colors cursor-pointer">
+                    <label for="fileInput" class="flex items-center gap-1.5 px-3 py-2 text-slate-600 font-bold text-xs hover:bg-white rounded-lg transition-colors cursor-pointer" title="ローカル読込">
                         <i data-lucide="file-up" size="16"></i>
                         <span>ローカル読込</span>
                     </label>
@@ -88,7 +90,7 @@
                 <div class="flex-1"></div>
 
                 <div class="flex items-center gap-1">
-                    <button id="logoutBtn" class="hidden items-center gap-1.5 px-3 py-2 text-red-600 font-bold text-xs hover:bg-red-50 rounded-lg transition-colors">
+                    <button id="logoutBtn" class="hidden flex items-center gap-1.5 px-3 py-2 text-red-600 font-bold text-xs hover:bg-red-50 rounded-lg transition-colors">
                         <i data-lucide="log-out" size="16"></i>
                         <span>ログアウト</span>
                     </button>
@@ -117,12 +119,9 @@
 
     <!-- メイン表示エリア -->
     <main id="memoContainer" class="max-w-6xl mx-auto px-4 mt-8 memo-grid">
-        <div class="col-span-full py-32 flex flex-col items-center text-center px-10">
-            <div class="w-20 h-20 bg-blue-50 text-blue-300 rounded-3xl flex items-center justify-center mb-6">
-                <i data-lucide="plane" size="40"></i>
-            </div>
-            <h2 class="text-xl font-bold text-slate-700 tracking-tight">データがありません</h2>
-            <p class="text-slate-400 text-sm mt-2 max-w-xs">右上の同期ボタンからデータを読み込むか、＋ボタンから新しく追加してください。</p>
+        <div class="col-span-full py-32 flex flex-col items-center text-center px-10 text-slate-400">
+            <i data-lucide="plane" size="48" class="mb-4 opacity-20"></i>
+            <p>同期中、またはデータがありません</p>
         </div>
     </main>
 
@@ -131,16 +130,16 @@
         <i data-lucide="plus" size="28"></i>
     </button>
 
-    <!-- 追加・編集モーダル -->
+    <!-- モーダル -->
     <div id="addModal" class="fixed inset-0 z-[60] hidden flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
         <div class="bg-white w-full max-w-md rounded-[2.5rem] p-6 shadow-2xl modal-enter max-h-[90vh] overflow-y-auto no-scrollbar">
             <div class="flex justify-between items-center mb-6">
                 <h2 id="modalTitle" class="text-xl font-black text-slate-800 tracking-tight">場所を追加</h2>
-                <button id="closeAddModalBtn" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" size="24"></i></button>
+                <button id="closeAddModalBtn" class="text-slate-400 hover:text-slate-600 transition-colors"><i data-lucide="x" size="24"></i></button>
             </div>
             <div class="space-y-4">
                 <div>
-                    <label class="block text-xs font-black text-slate-500 mb-1.5 ml-1 uppercase tracking-widest">タイトル *</label>
+                    <label class="block text-xs font-black text-slate-500 mb-1.5 ml-1 uppercase">タイトル *</label>
                     <div class="relative">
                         <input type="text" id="addTitle" class="w-full pl-4 pr-10 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none" placeholder="例：東京駅">
                         <button type="button" id="clear_addTitle" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300 hidden"><i data-lucide="x-circle" size="20"></i></button>
@@ -158,7 +157,7 @@
                     <div>
                         <label class="block text-[10px] font-black text-blue-600 mb-1.5 ml-1 uppercase tracking-widest flex items-center gap-1"><i data-lucide="map-pin" size="12"></i> Googleマップ (自動入力)</label>
                         <div class="relative">
-                            <input type="url" id="addMapUrl" class="w-full pl-4 pr-10 py-3 bg-blue-50/50 border border-blue-100 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none text-sm text-blue-800" placeholder="タイトルから自動生成されます">
+                            <input type="url" id="addMapUrl" class="w-full pl-4 pr-10 py-3 bg-blue-50 border border-blue-100 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none text-sm text-blue-800" placeholder="タイトルから生成されます">
                             <button type="button" id="clear_addMapUrl" class="absolute right-3 top-1/2 -translate-y-1/2 text-blue-300 hidden"><i data-lucide="x-circle" size="18"></i></button>
                         </div>
                     </div>
@@ -181,14 +180,14 @@
                         </div>
                         <div class="flex items-center gap-3 pl-1">
                             <span class="text-[10px] font-bold text-slate-300 uppercase">Or</span>
-                            <label class="flex items-center gap-2 px-4 py-2 bg-white text-slate-600 rounded-xl cursor-pointer hover:bg-slate-50 border border-slate-200 text-xs font-bold transition-colors">
+                            <label class="flex items-center gap-2 px-4 py-2 bg-white text-slate-600 rounded-xl cursor-pointer hover:bg-slate-50 border border-slate-200 text-xs font-bold shadow-sm">
                                 <i data-lucide="image-plus" size="16"></i> ファイルを選択
                                 <input type="file" id="addImageFile" accept="image/*" class="hidden">
                             </label>
                         </div>
                         <div id="previewContainer" class="relative hidden">
                             <img id="imagePreview" src="" class="w-full h-40 object-cover rounded-2xl border border-slate-200 shadow-sm">
-                            <button type="button" id="clearPreviewBtn" class="absolute top-2 right-2 p-1.5 bg-slate-900/60 text-white rounded-full backdrop-blur-sm"><i data-lucide="x" size="16"></i></button>
+                            <button type="button" id="clearPreviewBtn" class="absolute top-2 right-2 p-1.5 bg-slate-900/60 text-white rounded-full backdrop-blur-sm shadow-lg"><i data-lucide="x" size="16"></i></button>
                         </div>
                     </div>
                 </div>
@@ -216,7 +215,7 @@
     </div>
 
     <script>
-        // --- 状態管理 ---
+        // --- State Management ---
         let allMemos = [];
         let currentTag = 'all';
         let searchQuery = '';
@@ -224,6 +223,7 @@
         let uploadedImageDataUrl = ''; 
         let editingMemoId = null;
 
+        // --- Config ---
         const CONFIG_READY = (typeof CONFIG !== 'undefined' && CONFIG.CLIENT_ID && !CONFIG.CLIENT_ID.includes('YOUR_'));
         const CLIENT_ID = CONFIG_READY ? CONFIG.CLIENT_ID : '';
         const API_KEY = CONFIG_READY ? CONFIG.API_KEY : '';
@@ -232,58 +232,189 @@
 
         let tokenClient, accessToken = null, gapiInited = false, gisInited = false, actionAfterAuth = null;
 
-        // --- 初期設定 ---
+        // --- Initialization ---
+        async function init() {
+            initLocalEvents();
+            await loadPersistedData();
+            await initGoogleAuth();
+            render();
+        }
+
         function initLocalEvents() {
             document.getElementById('fabAdd').onclick = openAddModal;
-            document.getElementById('fileInput').onchange = (e) => {
-                const file = e.target.files[0]; if (!file) return;
-                const reader = new FileReader();
-                reader.onload = async (ev) => {
-                    try {
-                        const data = JSON.parse(ev.target.result);
-                        if (Array.isArray(data)) {
-                            allMemos = data; currentDriveFileId = null;
-                            await saveCache(); render();
-                        }
-                    } catch (err) { alert("JSON読み込み失敗"); }
-                };
-                reader.readAsText(file);
-            };
+            document.getElementById('fileInput').onchange = handleLocalFileUpload;
             document.getElementById('searchInput').oninput = (e) => { searchQuery = e.target.value; render(); };
             document.querySelector('[data-tag="all"]').onclick = () => { currentTag = 'all'; render(); };
             document.getElementById('closeAddModalBtn').onclick = () => document.getElementById('addModal').classList.add('hidden');
-            setupInputClearButtons();
             document.getElementById('saveNewMemoBtn').onclick = saveMemo;
             document.getElementById('deleteMemoBtn').onclick = deleteMemo;
             document.getElementById('clearDataBtn').onclick = clearAllLocalData;
+            document.getElementById('logoutBtn').onclick = logout;
+            document.getElementById('driveSyncBtn').onclick = handleSyncClick;
+            document.getElementById('drivePickerBtn').onclick = handlePickerClick;
+            setupInputClearButtons();
             setupImageHandlers();
         }
 
-        async function initGoogleDrive() {
+        async function loadPersistedData() {
+            const cached = await idbKeyval.get('travelMemos_cache');
+            if (cached) allMemos = cached;
+            currentDriveFileId = await idbKeyval.get('driveFileId_cache');
+            accessToken = await idbKeyval.get('gapi_access_token');
+            const expiry = await idbKeyval.get('gapi_token_expiry');
+            
+            // トークンが期限切れならクリア
+            if (expiry && Date.now() > parseInt(expiry)) {
+                accessToken = null;
+                await idbKeyval.del('gapi_access_token');
+                await idbKeyval.del('gapi_token_expiry');
+            }
+        }
+
+        async function initGoogleAuth() {
             if (!CONFIG_READY) return;
             try {
-                gapi.load('client:picker', async () => {
-                    await gapi.client.init({ apiKey: API_KEY, discoveryDocs: DISCOVERY_DOCS });
-                    gapiInited = true; checkSyncStatus();
-                });
+                // GAPI Client
+                await new Promise((resolve) => gapi.load('client', resolve));
+                await gapi.client.init({ apiKey: API_KEY, discoveryDocs: DISCOVERY_DOCS });
+                gapiInited = true;
+
+                // GSI Token Client
                 tokenClient = google.accounts.oauth2.initTokenClient({
                     client_id: CLIENT_ID, scope: SCOPES,
                     callback: async (resp) => {
-                        if (resp.error) { resetSyncIcon(); return; }
+                        if (resp.error) {
+                            actionAfterAuth = null;
+                            updateDriveUI();
+                            return;
+                        }
                         await saveToken(resp.access_token);
                         if (actionAfterAuth === 'picker') createPicker();
                         else if (actionAfterAuth === 'sync') fetchDriveData(currentDriveFileId);
+                        actionAfterAuth = null;
                     },
                 });
-                gisInited = true; checkSyncStatus();
-            } catch (e) { console.error(e); }
+                gisInited = true;
+
+                // 保存されていたトークンがあればGAPIにセット
+                if (accessToken) {
+                    gapi.client.setToken({ access_token: accessToken });
+                    updateDriveUI();
+                    // ファイルIDがあれば同期を試みる
+                    if (currentDriveFileId) fetchDriveData(currentDriveFileId);
+                }
+            } catch (e) {
+                console.error("Auth Init Error:", e);
+            }
         }
 
-        function checkSyncStatus() {
-            if (gapiInited && gisInited) updateDriveUI();
+        // --- Auth Actions ---
+
+        async function handleSyncClick() {
+            if (!accessToken) {
+                actionAfterAuth = 'sync';
+                tokenClient.requestAccessToken({prompt: 'consent'});
+            } else {
+                if (currentDriveFileId) fetchDriveData(currentDriveFileId);
+                else handlePickerClick();
+            }
         }
 
-        // --- モーダル制御 ---
+        async function handlePickerClick() {
+            if (!accessToken) {
+                actionAfterAuth = 'picker';
+                tokenClient.requestAccessToken({prompt: 'consent'});
+            } else {
+                createPicker();
+            }
+        }
+
+        async function saveToken(token) {
+            accessToken = token;
+            gapi.client.setToken({ access_token: token });
+            await idbKeyval.set('gapi_access_token', token);
+            await idbKeyval.set('gapi_token_expiry', Date.now() + 3550 * 1000); 
+            updateDriveUI();
+        }
+
+        async function logout() {
+            if (!confirm("ログアウトして認証情報をクリアしますか？")) return;
+            accessToken = null;
+            await idbKeyval.del('gapi_access_token');
+            await idbKeyval.del('gapi_token_expiry');
+            updateDriveUI();
+            location.reload();
+        }
+
+        function updateDriveUI() {
+            const syncText = document.getElementById('driveSyncText');
+            if (syncText) syncText.textContent = currentDriveFileId ? "Drive同期" : "Driveを開く";
+            document.getElementById('logoutBtn')?.classList.toggle('hidden', !accessToken);
+        }
+
+        // --- Drive Operations ---
+
+        function createPicker() {
+            const docsView = new google.picker.DocsView(google.picker.ViewId.DOCS).setMimeTypes('application/json');
+            const picker = new google.picker.PickerBuilder()
+                .addView(docsView)
+                .setOAuthToken(accessToken)
+                .setDeveloperKey(API_KEY)
+                .setCallback(async (data) => {
+                    if (data.action === google.picker.Action.PICKED) {
+                        currentDriveFileId = data.docs[0].id; 
+                        await idbKeyval.set('driveFileId_cache', currentDriveFileId);
+                        updateDriveUI();
+                        fetchDriveData(currentDriveFileId); 
+                    }
+                }).build();
+            picker.setVisible(true);
+        }
+
+        async function fetchDriveData(fileId) {
+            const btnText = document.getElementById('driveSyncText');
+            const icon = document.querySelector('#driveSyncBtn i');
+            if (btnText) btnText.textContent = "同期中...";
+            if (icon) icon.classList.add('animate-spin');
+            
+            try {
+                const resp = await gapi.client.drive.files.get({ fileId: fileId, alt: 'media' });
+                let data = resp.result;
+                if (typeof data === 'string') data = JSON.parse(data);
+                if (Array.isArray(data)) {
+                    allMemos = data;
+                    await idbKeyval.set('travelMemos_cache', allMemos);
+                    render();
+                }
+            } catch (e) {
+                if (e.status === 401 || e.status === 403) {
+                    accessToken = null;
+                    updateDriveUI();
+                    alert("認証が切れました。再度ボタンを押してください。");
+                }
+            } finally {
+                if (btnText) btnText.textContent = currentDriveFileId ? "Drive同期" : "Driveを開く";
+                if (icon) icon.classList.remove('animate-spin');
+            }
+        }
+
+        async function uploadToDrive() {
+            if (!currentDriveFileId || !accessToken) return true;
+            try {
+                const request = gapi.client.request({
+                    path: '/upload/drive/v3/files/' + currentDriveFileId,
+                    method: 'PATCH', params: { uploadType: 'media' }, body: JSON.stringify(allMemos, null, 2)
+                });
+                await new Promise((resolve, reject) => request.execute(r => r && r.error ? reject(r.error) : resolve(r)));
+                return true;
+            } catch (err) {
+                console.error("Upload Error", err);
+                return false;
+            }
+        }
+
+        // --- UI Operations ---
+
         function openAddModal() {
             editingMemoId = null;
             document.getElementById('modalTitle').textContent = '新しく追加';
@@ -309,18 +440,22 @@
                 if (!input || !btn) return;
                 input.oninput = () => {
                     btn.classList.toggle('hidden', input.value.length === 0);
-                    // タイトル入力時にマップを自動生成
-                    if (id === 'addTitle') {
-                        const titleVal = input.value.trim();
-                        const mapInput = document.getElementById('addMapUrl');
-                        if (titleVal) {
-                            mapInput.value = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(titleVal)}`;
-                            document.getElementById('clear_addMapUrl').classList.remove('hidden');
-                        }
-                    }
+                    if (id === 'addTitle') handleSmartMaps(input.value.trim());
                 };
                 btn.onclick = () => { input.value = ''; btn.classList.add('hidden'); input.focus(); if(id==='addTags') refreshTagHintStyles(); };
             });
+        }
+
+        function handleSmartMaps(title) {
+            const mapInput = document.getElementById('addMapUrl');
+            const mapClear = document.getElementById('clear_addMapUrl');
+            if (title) {
+                mapInput.value = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(title)}`;
+                mapClear.classList.remove('hidden');
+            } else {
+                mapInput.value = '';
+                mapClear.classList.add('hidden');
+            }
         }
 
         async function saveMemo() {
@@ -348,20 +483,39 @@
             const oldMemos = [...allMemos];
             if (editingMemoId) {
                 allMemos[allMemos.findIndex(m => m.id === editingMemoId)] = newMemo;
-            } else { allMemos.unshift(newMemo); }
+            } else {
+                allMemos.unshift(newMemo);
+            }
             
             let success = true;
-            if (currentDriveFileId) success = await uploadToDrive();
+            if (currentDriveFileId && accessToken) {
+                success = await uploadToDrive();
+            }
 
             if (success) {
-                await saveCache(); 
+                await idbKeyval.set('travelMemos_cache', allMemos);
                 document.getElementById('addModal').classList.add('hidden');
                 render();
-            } else { allMemos = oldMemos; alert("Drive同期失敗"); }
-            btn.disabled = false; document.getElementById('saveBtnText').textContent = editingMemoId ? '上書き保存' : '追加する';
+            } else {
+                allMemos = oldMemos;
+                alert("同期エラー。ローカルのみ更新するにはDrive同期を切ってください。");
+            }
+            btn.disabled = false; document.getElementById('saveBtnText').textContent = '保存する';
         }
 
-        // --- メインレンダリング (確実な遷移のために window.open を使用) ---
+        async function deleteMemo() {
+            if (!confirm("削除しますか？")) return;
+            const old = [...allMemos];
+            allMemos = allMemos.filter(m => m.id !== editingMemoId);
+            let success = true;
+            if (currentDriveFileId && accessToken) success = await uploadToDrive();
+            if (success) {
+                await idbKeyval.set('travelMemos_cache', allMemos);
+                document.getElementById('addModal').classList.add('hidden');
+                render();
+            } else { allMemos = old; alert("同期エラー"); }
+        }
+
         function render() {
             const container = document.getElementById('memoContainer');
             const filtered = allMemos.filter(m => {
@@ -372,12 +526,9 @@
 
             if (allMemos.length === 0) {
                 container.innerHTML = `
-                    <div class="col-span-full py-32 flex flex-col items-center text-center px-10">
-                        <div class="w-20 h-20 bg-blue-50 text-blue-300 rounded-3xl flex items-center justify-center mb-6">
-                            <i data-lucide="plane" size="40"></i>
-                        </div>
-                        <h2 class="text-xl font-bold text-slate-700 tracking-tight">データがありません</h2>
-                        <p class="text-slate-400 text-sm mt-2 max-w-xs">右上の同期ボタンからデータを読み込むか、＋ボタンから追加しましょう！</p>
+                    <div class="col-span-full py-32 flex flex-col items-center text-center px-10 text-slate-400">
+                        <i data-lucide="plane" size="48" class="mb-4 opacity-20"></i>
+                        <p>データがありません。Drive同期をするか、右下の＋ボタンで追加してください。</p>
                     </div>`;
                 if (typeof lucide !== 'undefined') lucide.createIcons();
                 return;
@@ -385,47 +536,39 @@
 
             container.innerHTML = filtered.map(m => `
                 <div class="memo-item bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm flex flex-col hover:shadow-xl transition-all duration-300">
-                    ${m.image ? `<img src="${m.image}" class="w-full h-auto cursor-zoom-in block" onclick="openLightbox('${m.image}')" loading="lazy">` : ''}
+                    ${m.image ? `<img src="${m.image}" class="w-full h-auto cursor-zoom-in block" onclick="window.openLightbox('${m.image}')" loading="lazy">` : ''}
                     <div class="p-5 flex-1 flex flex-col">
                         <h3 class="font-black text-slate-800 mb-3 text-base leading-snug">${m.title}</h3>
                         ${m.text ? `<div class="bg-blue-50/40 text-blue-900 text-[13px] p-4 rounded-2xl mb-4 whitespace-pre-wrap leading-relaxed shadow-inner font-medium">${m.text}</div>` : ''}
                         <div class="flex flex-wrap gap-1.5 mb-5">${(m.tags || []).map(t => `<span class="px-2.5 py-1 bg-slate-100 text-slate-500 text-[10px] rounded-lg font-black uppercase">#${t}</span>`).join('')}</div>
                         
-                        <!-- アクションボタン: window.open を直接呼び出して確実にリンクを開く -->
                         <div class="flex flex-wrap gap-2 mb-4">
                             ${m.url ? `
-                            <button onclick="window.open('${m.url}', '_blank'); event.stopPropagation();" class="flex-1 min-w-[90px] bg-blue-50 text-blue-600 text-[11px] font-black py-2.5 rounded-xl border border-blue-100 hover:bg-blue-100 flex items-center justify-center gap-1.5 transition-colors">
+                            <button onclick="window.open('${m.url}', '_blank')" class="flex-1 min-w-[90px] bg-blue-50 text-blue-600 text-[11px] font-black py-2.5 rounded-xl border border-blue-100 hover:bg-blue-100 flex items-center justify-center gap-1.5 transition-colors">
                                 <i data-lucide="globe" size="14"></i>公式サイト
                             </button>` : ''}
                             ${m.mapUrl ? `
-                            <button onclick="window.open('${m.mapUrl}', '_blank'); event.stopPropagation();" class="flex-1 min-w-[90px] bg-green-50 text-green-600 text-[11px] font-black py-2.5 rounded-xl border border-green-100 hover:bg-green-100 flex items-center justify-center gap-1.5 transition-colors">
+                            <button onclick="window.open('${m.mapUrl}', '_blank')" class="flex-1 min-w-[90px] bg-green-50 text-green-600 text-[11px] font-black py-2.5 rounded-xl border border-green-100 hover:bg-green-100 flex items-center justify-center gap-1.5 transition-colors">
                                 <i data-lucide="map-pin" size="14"></i>マップ表示
                             </button>` : ''}
                         </div>
 
                         <div class="flex justify-between items-center pt-4 border-t border-slate-50 mt-auto">
                             <span class="text-[9px] text-slate-300 font-black uppercase tracking-tighter">${m.timestamp ? new Date(m.timestamp).toLocaleDateString() : ''}</span>
-                            <button onclick="editMemo('${m.id}')" class="text-slate-400 hover:text-blue-600 transition-colors p-1"><i data-lucide="pencil" size="16"></i></button>
+                            <button onclick="window.editMemo('${m.id}')" class="text-slate-400 hover:text-blue-600 transition-colors p-1"><i data-lucide="pencil" size="16"></i></button>
                         </div>
                     </div>
                 </div>
             `).join('');
 
-            const tags = new Set(); allMemos.forEach(m => (m.tags || []).forEach(t => tags.add(t)));
-            document.querySelectorAll('.dynamic-tag').forEach(c => c.remove());
-            Array.from(tags).sort().forEach(tag => {
-                const btn = document.createElement('button');
-                btn.className = `dynamic-tag px-5 py-2 rounded-full text-[11px] font-black transition-all ${currentTag === tag ? 'bg-blue-600 text-white shadow-lg' : 'bg-white border border-slate-200 text-slate-500 hover:border-blue-300'}`;
-                btn.textContent = tag; btn.onclick = () => { currentTag = tag; render(); };
-                document.getElementById('tagList').appendChild(btn);
-            });
+            updateFilterTags();
             if (typeof lucide !== 'undefined') lucide.createIcons();
         }
 
         window.editMemo = (id) => {
             const memo = allMemos.find(m => m.id === id); if (!memo) return;
             editingMemoId = id;
-            document.getElementById('modalTitle').textContent = 'メモを編集';
+            document.getElementById('modalTitle').textContent = '編集';
             document.getElementById('saveBtnText').textContent = '上書き保存';
             document.getElementById('addTitle').value = memo.title || '';
             document.getElementById('addUrl').value = memo.url || '';
@@ -445,10 +588,54 @@
             refreshClearBtnVisibility();
         }
 
-        // --- その他補助 ---
-        async function clearAllLocalData() {
-            if(!confirm("データを初期化しますか？")) return;
-            await idbKeyval.clear(); location.reload();
+        // --- Helpers ---
+
+        function updateFilterTags() {
+            const tags = new Set(); 
+            allMemos.forEach(m => (m.tags || []).forEach(t => tags.add(t)));
+            document.querySelectorAll('.dynamic-tag').forEach(c => c.remove());
+            Array.from(tags).sort().forEach(tag => {
+                const btn = document.createElement('button');
+                btn.className = `dynamic-tag px-5 py-2 rounded-full text-[11px] font-black transition-all ${currentTag === tag ? 'bg-blue-600 text-white shadow-lg' : 'bg-white border border-slate-200 text-slate-500 hover:border-blue-300'}`;
+                btn.textContent = tag; btn.onclick = () => { currentTag = tag; render(); };
+                document.getElementById('tagList').appendChild(btn);
+            });
+        }
+
+        function renderTagHints() {
+            const container = document.getElementById('existingTagsContainer');
+            container.innerHTML = '';
+            const tags = new Set(); allMemos.forEach(m => (m.tags || []).forEach(t => tags.add(t)));
+            Array.from(tags).sort().forEach(tag => {
+                const btn = document.createElement('button');
+                btn.className = 'px-3 py-1 bg-slate-100 text-slate-500 text-[10px] rounded-xl font-black border border-slate-200 transition-colors hover:bg-slate-200';
+                btn.textContent = '#' + tag;
+                btn.onclick = () => {
+                    const input = document.getElementById('addTags');
+                    let cur = input.value.split(',').map(t => t.trim()).filter(t => t);
+                    if (cur.includes(tag)) cur = cur.filter(t => t !== tag); else cur.push(tag);
+                    input.value = cur.join(', '); refreshTagHintStyles();
+                };
+                container.appendChild(btn);
+            });
+            refreshTagHintStyles();
+        }
+
+        function refreshTagHintStyles() {
+            const input = document.getElementById('addTags');
+            const cur = input.value.split(',').map(t => t.trim());
+            document.querySelectorAll('#existingTagsContainer button').forEach(btn => {
+                const tag = btn.textContent.replace('#', '');
+                btn.className = cur.includes(tag) ? 'bg-blue-100 text-blue-600' : 'bg-slate-100 text-slate-500';
+                btn.classList.add('px-3', 'py-1', 'text-[10px]', 'rounded-xl', 'font-black', 'border', 'border-slate-200');
+            });
+        }
+
+        function refreshClearBtnVisibility() {
+            ['addTitle', 'addUrl', 'addMapUrl', 'addText', 'addImageUrl', 'addTags'].forEach(id => {
+                const val = document.getElementById(id).value;
+                document.getElementById('clear_'+id).classList.toggle('hidden', val.length === 0);
+            });
         }
 
         function setupImageHandlers() {
@@ -477,102 +664,39 @@
             };
         }
 
-        async function saveCache() {
-            await idbKeyval.set('travelMemos_cache', allMemos);
-            if (currentDriveFileId) await idbKeyval.set('driveFileId_cache', currentDriveFileId);
+        async function handleLocalFileUpload(e) {
+            const file = e.target.files[0]; if (!file) return;
+            const reader = new FileReader();
+            reader.onload = async (ev) => {
+                try {
+                    const data = JSON.parse(ev.target.result);
+                    if (Array.isArray(data)) {
+                        allMemos = data; 
+                        currentDriveFileId = null;
+                        await idbKeyval.set('travelMemos_cache', allMemos);
+                        await idbKeyval.del('driveFileId_cache');
+                        updateDriveUI();
+                        render();
+                    }
+                } catch (err) { alert("JSON読み込み失敗"); }
+            };
+            reader.readAsText(file);
         }
 
-        async function uploadToDrive() {
-            if (!currentDriveFileId) return true;
-            try {
-                const token = await ensureAccessToken();
-                if (gapi.client) gapi.client.setToken({ access_token: token });
-                const request = gapi.client.request({
-                    path: '/upload/drive/v3/files/' + currentDriveFileId,
-                    method: 'PATCH', params: { uploadType: 'media' }, body: JSON.stringify(allMemos, null, 2)
-                });
-                await new Promise((resolve, reject) => request.execute(r => r && r.error ? reject(r.error) : resolve(r)));
-                return true;
-            } catch (err) { return false; }
+        async function clearAllLocalData() {
+            if(!confirm("キャッシュを初期化しますか？")) return;
+            await idbKeyval.clear();
+            location.reload();
         }
 
-        async function ensureAccessToken() {
-            const saved = await idbKeyval.get('gapi_access_token');
-            const expiry = await idbKeyval.get('gapi_token_expiry');
-            if (saved && expiry && Date.now() < parseInt(expiry)) return saved;
-            return new Promise((resolve) => {
-                tokenClient.callback = async (resp) => {
-                    await saveToken(resp.access_token); resolve(resp.access_token);
-                };
-                tokenClient.requestAccessToken({prompt: ''});
-            });
-        }
+        window.openLightbox = (src) => { 
+            document.getElementById('lightboxImg').src = src; 
+            document.getElementById('lightbox').classList.remove('hidden'); 
+        };
 
-        async function saveToken(token) {
-            accessToken = token;
-            await idbKeyval.set('gapi_access_token', token);
-            await idbKeyval.set('gapi_token_expiry', Date.now() + 3550 * 1000); 
-            updateDriveUI();
-        }
+        // --- Start ---
+        window.addEventListener('load', init);
 
-        function updateDriveUI() {
-            const syncText = document.getElementById('driveSyncText');
-            if (syncText) syncText.textContent = currentDriveFileId ? "Drive同期" : "Driveを開く";
-            document.getElementById('logoutBtn')?.classList.toggle('hidden', !accessToken);
-        }
-
-        function refreshClearBtnVisibility() {
-            ['addTitle', 'addUrl', 'addMapUrl', 'addText', 'addImageUrl', 'addTags'].forEach(id => {
-                const val = document.getElementById(id).value;
-                document.getElementById('clear_'+id).classList.toggle('hidden', val.length === 0);
-            });
-        }
-
-        function renderTagHints() {
-            const container = document.getElementById('existingTagsContainer');
-            container.innerHTML = '';
-            const tags = new Set(); allMemos.forEach(m => (m.tags || []).forEach(t => tags.add(t)));
-            Array.from(tags).sort().forEach(tag => {
-                const btn = document.createElement('button');
-                btn.className = 'px-3 py-1 bg-slate-100 text-slate-500 text-[10px] rounded-xl font-black border border-slate-200 transition-colors hover:bg-slate-200';
-                btn.textContent = '#' + tag;
-                btn.onclick = () => {
-                    const input = document.getElementById('addTags');
-                    let cur = input.value.split(',').map(t => t.trim()).filter(t => t);
-                    if (cur.includes(tag)) cur = cur.filter(t => t !== tag); else cur.push(tag);
-                    input.value = cur.join(', '); refreshTagHintStyles();
-                };
-                container.appendChild(btn);
-            });
-            refreshTagHintStyles();
-        }
-
-        function refreshTagHintStyles() {
-            const input = document.getElementById('addTags');
-            const cur = input.value.split(',').map(t => t.trim());
-            document.querySelectorAll('#existingTagsContainer button').forEach(btn => {
-                const tag = btn.textContent.replace('#', '');
-                btn.className = cur.includes(tag) ? 'px-3 py-1 bg-blue-100 text-blue-600 text-[10px] rounded-xl font-black border border-blue-200' : 'px-3 py-1 bg-slate-100 text-slate-500 text-[10px] rounded-xl font-black border border-slate-200';
-            });
-        }
-
-        window.addEventListener('load', async () => {
-            initLocalEvents();
-            const cached = await idbKeyval.get('travelMemos_cache');
-            if (cached) allMemos = cached;
-            currentDriveFileId = await idbKeyval.get('driveFileId_cache');
-            if (allMemos.length > 0) render();
-            await initGoogleDrive();
-        });
-        
-        window.openLightbox = (src) => { document.getElementById('lightboxImg').src = src; document.getElementById('lightbox').classList.remove('hidden'); };
-        
-        async function deleteMemo() {
-            if (!confirm("削除しますか？")) return;
-            allMemos = allMemos.filter(m => m.id !== editingMemoId);
-            if (currentDriveFileId) await uploadToDrive();
-            await saveCache(); document.getElementById('addModal').classList.add('hidden'); render();
-        }
     </script>
 </body>
 </html>
