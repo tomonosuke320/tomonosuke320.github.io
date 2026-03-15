@@ -55,9 +55,9 @@
                     <i data-lucide="globe" size="24"></i>
                 </div>
                 <div>
-                    <!-- ★ バージョン番号を v1.5.1 に更新 -->
+                    <!-- ★ バージョン番号を v1.5.2 に更新 -->
                     <h1 class="text-lg font-black text-slate-800 tracking-tight flex items-center gap-2">
-                        Travel Scrapper <span class="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200">v1.5.1</span>
+                        Travel Scrapper <span class="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200">v1.5.2</span>
                     </h1>
                     <p class="text-[10px] text-blue-600 font-bold uppercase tracking-widest">Web Viewer</p>
                 </div>
@@ -138,23 +138,44 @@
             </div>
             
             <div class="space-y-4">
+                <!-- ★ 各入力欄にクリアボタン（x-circle）を追加 -->
                 <div>
                     <label class="block text-xs font-bold text-slate-500 mb-1 ml-1">タイトル <span class="text-red-500">*</span></label>
-                    <input type="text" id="addTitle" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none" placeholder="例：絶景カフェ">
+                    <div class="relative">
+                        <input type="text" id="addTitle" class="w-full pl-4 pr-10 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none" placeholder="例：絶景カフェ">
+                        <button type="button" id="clear_addTitle" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 hidden transition-colors" title="クリア">
+                            <i data-lucide="x-circle" size="20"></i>
+                        </button>
+                    </div>
                 </div>
                 <div>
                     <label class="block text-xs font-bold text-slate-500 mb-1 ml-1">URL (任意)</label>
-                    <input type="url" id="addUrl" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none" placeholder="https://...">
+                    <div class="relative">
+                        <input type="url" id="addUrl" class="w-full pl-4 pr-10 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none" placeholder="https://...">
+                        <button type="button" id="clear_addUrl" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 hidden transition-colors" title="クリア">
+                            <i data-lucide="x-circle" size="20"></i>
+                        </button>
+                    </div>
                 </div>
                 <div>
                     <label class="block text-xs font-bold text-slate-500 mb-1 ml-1">メモ (任意)</label>
-                    <textarea id="addText" rows="3" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none resize-none" placeholder="ここに行きたい！"></textarea>
+                    <div class="relative">
+                        <textarea id="addText" rows="3" class="w-full pl-4 pr-10 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none resize-none" placeholder="ここに行きたい！"></textarea>
+                        <button type="button" id="clear_addText" class="absolute right-3 top-3 text-slate-400 hover:text-slate-600 hidden transition-colors" title="クリア">
+                            <i data-lucide="x-circle" size="20"></i>
+                        </button>
+                    </div>
                 </div>
                 
                 <div>
                     <label class="block text-xs font-bold text-slate-500 mb-1 ml-1">画像 (URLまたはアップロード)</label>
                     <div class="space-y-2">
-                        <input type="url" id="addImageUrl" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none" placeholder="画像のURLを入力 (https://...)">
+                        <div class="relative">
+                            <input type="url" id="addImageUrl" class="w-full pl-4 pr-10 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none" placeholder="画像のURLを入力 (https://...)">
+                            <button type="button" id="clear_addImageUrl" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 hidden transition-colors" title="クリア">
+                                <i data-lucide="x-circle" size="20"></i>
+                            </button>
+                        </div>
                         <div class="flex items-center gap-3 pl-1">
                             <span class="text-xs font-bold text-slate-400">または</span>
                             <label class="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 text-slate-600 rounded-lg cursor-pointer hover:bg-slate-200 transition-colors border border-slate-200 text-xs font-bold">
@@ -163,13 +184,25 @@
                             </label>
                             <span id="imageFileName" class="text-xs text-slate-500 truncate max-w-[150px]"></span>
                         </div>
-                        <img id="imagePreview" src="" class="hidden w-full h-32 object-cover rounded-xl mt-2 border border-slate-200">
+                        
+                        <!-- ★ 画像プレビューエリアと画像削除ボタン -->
+                        <div id="previewContainer" class="relative hidden mt-2">
+                            <img id="imagePreview" src="" class="w-full h-32 object-cover rounded-xl border border-slate-200">
+                            <button type="button" id="clearPreviewBtn" class="absolute top-2 right-2 p-1.5 bg-slate-900/50 hover:bg-slate-900/80 text-white rounded-full transition-colors backdrop-blur-sm shadow-md" title="この画像を削除">
+                                <i data-lucide="x" size="16"></i>
+                            </button>
+                        </div>
                     </div>
                 </div>
 
                 <div>
                     <label class="block text-xs font-bold text-slate-500 mb-1 ml-1">タグ (カンマ区切りで複数可)</label>
-                    <input type="text" id="addTags" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none" placeholder="例：カフェ, 絶景">
+                    <div class="relative">
+                        <input type="text" id="addTags" class="w-full pl-4 pr-10 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none" placeholder="例：カフェ, 絶景">
+                        <button type="button" id="clear_addTags" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 hidden transition-colors" title="クリア">
+                            <i data-lucide="x-circle" size="20"></i>
+                        </button>
+                    </div>
                     <div id="existingTagsContainer" class="flex flex-wrap gap-1.5 mt-2 pl-1"></div>
                 </div>
                 
@@ -208,9 +241,6 @@
         const CLIENT_ID = typeof CONFIG !== 'undefined' ? CONFIG.CLIENT_ID : '';
         const API_KEY = typeof CONFIG !== 'undefined' ? CONFIG.API_KEY : '';
         const DISCOVERY_DOCS = ["https://www.googleapis.com/discovery/v1/apis/drive/v3/rest"];
-        
-        // ★修正: 最も強力な「フルアクセス権限」に変更しました。
-        // テストユーザーとして登録されているあなたなら、警告画面を越えれば最強の権限で確実に保存できます。
         const SCOPES = "https://www.googleapis.com/auth/drive";
 
         let tokenClient;
@@ -218,6 +248,65 @@
         let gapiInited = false;
         let gisInited = false;
         let actionAfterAuth = null;
+
+        // ★ 入力欄のクリア（×）ボタンの設定
+        function setupClearButtons() {
+            const fields = ['addTitle', 'addUrl', 'addText', 'addImageUrl', 'addTags'];
+            fields.forEach(id => {
+                const input = document.getElementById(id);
+                const btn = document.getElementById(`clear_${id}`);
+                if (!input || !btn) return;
+
+                // 入力がある時だけ×ボタンを表示
+                input.addEventListener('input', () => {
+                    btn.classList.toggle('hidden', input.value.length === 0);
+                });
+
+                // ×ボタンを押したときの処理
+                btn.addEventListener('click', () => {
+                    input.value = '';
+                    btn.classList.add('hidden');
+                    
+                    if (id === 'addImageUrl') {
+                        // URLを消した時、アップロード画像がなければプレビューも消す
+                        if (!uploadedImageDataUrl) {
+                            document.getElementById('previewContainer').classList.add('hidden');
+                            document.getElementById('imagePreview').src = '';
+                        }
+                    } else if (id === 'addTags') {
+                        // タグを消したら、青色になっていた候補ボタンの色もリセット
+                        updateTagChipStyles();
+                    }
+                    
+                    input.focus(); // 消した後にすぐ入力できるようにフォーカスを当てる
+                });
+            });
+        }
+
+        // モーダルを開いた時に×ボタンの表示状態を一括更新する
+        function updateClearButtonsVisibility() {
+            const fields = ['addTitle', 'addUrl', 'addText', 'addImageUrl', 'addTags'];
+            fields.forEach(id => {
+                const input = document.getElementById(id);
+                const btn = document.getElementById(`clear_${id}`);
+                if (input && btn) {
+                    btn.classList.toggle('hidden', input.value.length === 0);
+                }
+            });
+        }
+
+        // プレビュー画像の「削除」ボタンの処理
+        document.getElementById('clearPreviewBtn').onclick = () => {
+            document.getElementById('addImageUrl').value = '';
+            document.getElementById('addImageFile').value = '';
+            document.getElementById('imageFileName').textContent = '';
+            uploadedImageDataUrl = '';
+            document.getElementById('previewContainer').classList.add('hidden');
+            document.getElementById('imagePreview').src = '';
+            
+            const clearUrlBtn = document.getElementById('clear_addImageUrl');
+            if (clearUrlBtn) clearUrlBtn.classList.add('hidden');
+        };
 
         // データの完全クリア機能
         async function clearAllData() {
@@ -397,7 +486,7 @@
                     accessToken = null;
                     alert(`【認証エラー】\n安全のためログアウトしました。\n再度ログインし、権限のチェックボックスにチェックを入れてください。`);
                 } else if (status === 404) {
-                    alert("【重要】ファイルが見つかりません！\n右側の「フォルダアイコン」を押して、再度ファイルを選択し直してください。");
+                    alert("【重要】ファイルが見つかりません！\n\n別のアカウントでログインしたか、ファイルが削除された可能性があります。\n右側の「フォルダアイコン」を押して、再度ファイルを選択し直してください。");
                     currentDriveFileId = null;
                     await saveCache();
                 } else { 
@@ -430,7 +519,6 @@
                 if (status === 401 || status === 403) {
                     await idbKeyval.del('gapi_access_token');
                     accessToken = null;
-                    // ★一番重要なエラーメッセージを詳しくしました
                     alert("【保存権限エラー(HTTP " + status + ")】\n\nGoogleドライブのファイルを書き換える権限がありませんでした。\n\nお手数ですが一度「ログアウト(赤いボタン)」を押し、再ログインする際に『Google ドライブのすべてのファイルの表示、編集、作成、削除』のチェックボックスに必ずチェックを入れてください！");
                 } else if (status === 404) {
                     alert("保存先ファイルが見つかりません。フォルダアイコンから選び直してください。");
@@ -443,6 +531,7 @@
             }
         }
 
+        // ファイルアップロード時にプレビューを表示
         document.getElementById('addImageFile').onchange = (e) => {
             const file = e.target.files[0]; if (!file) return;
             const reader = new FileReader();
@@ -456,12 +545,32 @@
                     canvas.getContext('2d').drawImage(img, 0, 0, w, h);
                     uploadedImageDataUrl = canvas.toDataURL('image/jpeg', 0.8);
                     document.getElementById('imagePreview').src = uploadedImageDataUrl;
-                    document.getElementById('imagePreview').classList.remove('hidden');
+                    document.getElementById('previewContainer').classList.remove('hidden');
+                    
+                    document.getElementById('addImageUrl').value = '';
+                    document.getElementById('clear_addImageUrl').classList.add('hidden');
                 };
                 img.src = event.target.result;
             };
             reader.readAsDataURL(file);
         };
+
+        // URL入力時にプレビューを表示
+        document.getElementById('addImageUrl').addEventListener('input', (e) => {
+            const url = e.target.value.trim();
+            if (url) {
+                document.getElementById('imagePreview').src = url;
+                document.getElementById('previewContainer').classList.remove('hidden');
+                uploadedImageDataUrl = '';
+                document.getElementById('addImageFile').value = '';
+                document.getElementById('imageFileName').textContent = '';
+            } else {
+                if (!uploadedImageDataUrl) {
+                    document.getElementById('previewContainer').classList.add('hidden');
+                    document.getElementById('imagePreview').src = '';
+                }
+            }
+        });
 
         function renderExistingTagsInModal() {
             const container = document.getElementById('existingTagsContainer');
@@ -476,10 +585,32 @@
                     let cur = input.value.split(',').map(t => t.trim()).filter(t => t.length > 0);
                     if (cur.includes(tag)) cur = cur.filter(t => t !== tag); else cur.push(tag);
                     input.value = cur.join(', ');
+                    updateTagChipStyles();
+                    updateClearButtonsVisibility(); // ×ボタンの表示を更新
                 };
                 container.appendChild(btn);
             });
+            updateTagChipStyles();
         }
+
+        function updateTagChipStyles() {
+            const input = document.getElementById('addTags');
+            if(!input) return;
+            const currentTags = input.value.split(',').map(t => t.trim()).filter(t => t.length > 0);
+            const btns = document.getElementById('existingTagsContainer').querySelectorAll('button');
+            
+            btns.forEach(btn => {
+                const tag = btn.textContent.replace('#', '');
+                if (currentTags.includes(tag)) {
+                    btn.classList.remove('bg-slate-100', 'text-slate-500', 'border-slate-200');
+                    btn.classList.add('bg-blue-100', 'text-blue-600', 'border-blue-300');
+                } else {
+                    btn.classList.remove('bg-blue-100', 'text-blue-600', 'border-blue-300');
+                    btn.classList.add('bg-slate-100', 'text-slate-500', 'border-slate-200');
+                }
+            });
+        }
+        document.getElementById('addTags').addEventListener('input', updateTagChipStyles);
 
         document.getElementById('fabAdd').onclick = () => {
             editingMemoId = null; 
@@ -487,9 +618,16 @@
             document.getElementById('saveBtnText').textContent = '追加';
             document.getElementById('addTitle').value = ''; document.getElementById('addUrl').value = '';
             document.getElementById('addText').value = ''; document.getElementById('addTags').value = '';
-            document.getElementById('imagePreview').classList.add('hidden');
+            document.getElementById('addImageUrl').value = '';
+            document.getElementById('addImageFile').value = '';
+            uploadedImageDataUrl = '';
+            
+            document.getElementById('previewContainer').classList.add('hidden');
+            document.getElementById('imagePreview').src = '';
+            
             document.getElementById('deleteMemoBtn').classList.add('hidden'); 
             renderExistingTagsInModal();
+            updateClearButtonsVisibility();
             document.getElementById('addModal').classList.remove('hidden');
         };
 
@@ -502,12 +640,26 @@
             document.getElementById('addUrl').value = memo.url || '';
             document.getElementById('addText').value = memo.text || '';
             document.getElementById('addTags').value = (memo.tags || []).join(', ');
+            
+            document.getElementById('addImageUrl').value = '';
+            document.getElementById('addImageFile').value = '';
+            uploadedImageDataUrl = '';
+
             if (memo.image) {
+                if (memo.image.startsWith('http')) {
+                    document.getElementById('addImageUrl').value = memo.image;
+                } else {
+                    uploadedImageDataUrl = memo.image;
+                }
                 document.getElementById('imagePreview').src = memo.image;
-                document.getElementById('imagePreview').classList.remove('hidden');
-            } else { document.getElementById('imagePreview').classList.add('hidden'); }
+                document.getElementById('previewContainer').classList.remove('hidden');
+            } else { 
+                document.getElementById('previewContainer').classList.add('hidden'); 
+                document.getElementById('imagePreview').src = '';
+            }
             document.getElementById('deleteMemoBtn').classList.remove('hidden'); 
             renderExistingTagsInModal();
+            updateClearButtonsVisibility();
             document.getElementById('addModal').classList.remove('hidden');
         };
 
@@ -525,10 +677,15 @@
                 id: editingMemoId || "m-" + Date.now(),
                 url: document.getElementById('addUrl').value,
                 title: title, text: document.getElementById('addText').value,
-                image: uploadedImageDataUrl || document.getElementById('addImageUrl').value.trim() || (editingMemoId ? allMemos.find(m=>m.id===editingMemoId).image : null),
+                image: uploadedImageDataUrl || document.getElementById('addImageUrl').value.trim() || (editingMemoId && !uploadedImageDataUrl && document.getElementById('addImageUrl').value.trim()==='' && document.getElementById('previewContainer').classList.contains('hidden')===false ? allMemos.find(m=>m.id===editingMemoId).image : null),
                 tags: document.getElementById('addTags').value.split(',').map(t => t.trim()).filter(t => t.length > 0),
                 timestamp: new Date().toISOString()
             };
+            
+            // もし画像プレビューが明示的に消されていたら image は空にする
+            if(document.getElementById('previewContainer').classList.contains('hidden')){
+                newMemo.image = null;
+            }
 
             const oldMemos = [...allMemos];
             if (editingMemoId) {
@@ -559,7 +716,7 @@
             if (allMemos.length === 0) { container.innerHTML = `<div class="col-span-full py-32 text-center text-slate-400">データがありません</div>`; return; }
             container.innerHTML = filtered.map(m => `
                 <div class="memo-item bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm flex flex-col">
-                    ${m.image ? `<img src="${m.image}" class="w-full h-auto cursor-zoom-in" onclick="openLightbox('${m.image}')">` : ''}
+                    ${m.image ? `<img src="${m.image}" class="w-full h-auto cursor-zoom-in block" onclick="openLightbox('${m.image}')">` : ''}
                     <div class="p-5 flex-1 flex flex-col">
                         <h3 class="font-bold text-slate-800 mb-3">${m.title}</h3>
                         ${m.text ? `<div class="bg-blue-50/50 text-blue-800 text-sm p-3.5 rounded-2xl italic mb-4 whitespace-pre-wrap">${m.text}</div>` : ''}
@@ -589,6 +746,7 @@
         window.openLightbox = (src) => { document.getElementById('lightboxImg').src = src; document.getElementById('lightbox').classList.remove('hidden'); };
 
         window.addEventListener('load', async () => {
+            setupClearButtons();
             await loadToken(); await loadCache(); tryInitGoogleApi();
             if (typeof lucide !== 'undefined') lucide.createIcons();
         });
