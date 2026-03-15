@@ -55,15 +55,15 @@
                     <i data-lucide="globe" size="24"></i>
                 </div>
                 <div>
-                    <!-- ★ バージョン番号を v1.5.0 に更新 -->
+                    <!-- ★ バージョン番号を v1.5.1 に更新 -->
                     <h1 class="text-lg font-black text-slate-800 tracking-tight flex items-center gap-2">
-                        Travel Scrapper <span class="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200">v1.5.0</span>
+                        Travel Scrapper <span class="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200">v1.5.1</span>
                     </h1>
                     <p class="text-[10px] text-blue-600 font-bold uppercase tracking-widest">Web Viewer</p>
                 </div>
             </div>
             <div class="flex gap-2">
-                <!-- ★ データクリア（初期化）ボタンを追加 -->
+                <!-- データクリア（初期化）ボタン -->
                 <button id="clearDataBtn" class="flex items-center gap-2 px-3 py-2 bg-slate-100 text-slate-600 rounded-xl hover:bg-slate-200 font-bold text-sm transition-colors border border-slate-200" title="ローカルデータをクリア（初期化）">
                     <i data-lucide="trash" size="18"></i>
                 </button>
@@ -208,7 +208,10 @@
         const CLIENT_ID = typeof CONFIG !== 'undefined' ? CONFIG.CLIENT_ID : '';
         const API_KEY = typeof CONFIG !== 'undefined' ? CONFIG.API_KEY : '';
         const DISCOVERY_DOCS = ["https://www.googleapis.com/discovery/v1/apis/drive/v3/rest"];
-        const SCOPES = "https://www.googleapis.com/auth/drive.file";
+        
+        // ★修正: 最も強力な「フルアクセス権限」に変更しました。
+        // テストユーザーとして登録されているあなたなら、警告画面を越えれば最強の権限で確実に保存できます。
+        const SCOPES = "https://www.googleapis.com/auth/drive";
 
         let tokenClient;
         let accessToken = null;
@@ -216,7 +219,7 @@
         let gisInited = false;
         let actionAfterAuth = null;
 
-        // ★ データの完全クリア機能を追加
+        // データの完全クリア機能
         async function clearAllData() {
             if(!confirm("【警告】ローカルのキャッシュ（一時データ）をすべて消去して、アプリを初期状態に戻しますか？\n※Googleドライブ上のファイルは消えません。")) return;
             allMemos = [];
@@ -225,7 +228,7 @@
             await idbKeyval.del('driveFileId_cache');
             render();
             updateDriveButtonState();
-            alert("データを初期化しました。右側のフォルダアイコンから、改めてGoogleドライブのファイルを選択してください。");
+            alert("データを初期化しました。");
         }
         document.getElementById('clearDataBtn').onclick = clearAllData;
 
@@ -276,7 +279,6 @@
             const syncText = document.getElementById('driveSyncText');
             const logoutBtn = document.getElementById('logoutBtn');
 
-            // クラッシュ防止: 要素が存在する場合のみ更新する
             if (syncText) {
                 if (currentDriveFileId) { syncText.textContent = "Drive同期"; }
                 else { syncText.textContent = "Driveを開く"; }
@@ -315,13 +317,13 @@
             if (gapiInited && gisInited) document.getElementById('driveBtnGroup').classList.remove('opacity-50');
         }
 
-        // ★ クラッシュの原因だった関数を修正 (id="driveSyncText" を維持するように変更)
         function resetSyncButton() {
             const btn = document.getElementById('driveSyncBtn');
             if (btn) {
                 btn.innerHTML = `<i data-lucide="refresh-cw" size="18"></i><span id="driveSyncText" class="hidden sm:inline">Drive同期</span>`;
             }
             if (typeof lucide !== 'undefined') lucide.createIcons();
+            updateDriveButtonState();
         }
 
         document.getElementById('driveSyncBtn').onclick = async () => {
@@ -359,7 +361,6 @@
         async function fetchDriveData(fileId) {
             const btn = document.getElementById('driveSyncBtn');
             if (btn) {
-                // ★ ID維持
                 btn.innerHTML = `<i data-lucide="refresh-cw" class="animate-spin" size="18"></i><span id="driveSyncText" class="hidden sm:inline">同期中...</span>`;
             }
             if (typeof lucide !== 'undefined') lucide.createIcons();
@@ -388,28 +389,22 @@
                 }
             } catch (e) {
                 console.error("Fetch Error Detail:", e);
-                
                 const status = e.status || (e.result && e.result.error && e.result.error.code) || e.code;
                 const msg = e.message || (e.result && e.result.error && e.result.error.message) || String(e);
 
                 if (status === 401 || status === 403) {
                     await idbKeyval.del('gapi_access_token');
                     accessToken = null;
-                    alert(`認証エラー(${status})。\n安全のためログアウトしました。再度ログインしてください。`);
+                    alert(`【認証エラー】\n安全のためログアウトしました。\n再度ログインし、権限のチェックボックスにチェックを入れてください。`);
                 } else if (status === 404) {
-                    alert("【重要】ファイルが見つかりません！\n\n別のアカウントでログインしたか、ファイルが削除された可能性があります。\n右側の「フォルダアイコン」を押して、再度ファイルを選択し直してください。");
-                    currentDriveFileId = null;
-                    await saveCache();
-                } else if (msg === "JSON_PARSE_ERROR" || msg === "INVALID_FORMAT") {
-                    alert("選択されたファイルが正しい「旅行メモ」のデータではありません。\nフォルダアイコンから、別のファイルを選択してください。");
+                    alert("【重要】ファイルが見つかりません！\n右側の「フォルダアイコン」を押して、再度ファイルを選択し直してください。");
                     currentDriveFileId = null;
                     await saveCache();
                 } else { 
-                    alert(`同期エラーが発生しました。\nステータス: ${status}\n詳細: ${msg}`); 
+                    alert(`同期エラーが発生しました。\nステータス: ${status}`); 
                 }
             } finally { 
                 resetSyncButton(); 
-                updateDriveButtonState(); 
             }
         }
 
@@ -435,7 +430,8 @@
                 if (status === 401 || status === 403) {
                     await idbKeyval.del('gapi_access_token');
                     accessToken = null;
-                    alert("保存権限エラー：再ログインが必要です。");
+                    // ★一番重要なエラーメッセージを詳しくしました
+                    alert("【保存権限エラー(HTTP " + status + ")】\n\nGoogleドライブのファイルを書き換える権限がありませんでした。\n\nお手数ですが一度「ログアウト(赤いボタン)」を押し、再ログインする際に『Google ドライブのすべてのファイルの表示、編集、作成、削除』のチェックボックスに必ずチェックを入れてください！");
                 } else if (status === 404) {
                     alert("保存先ファイルが見つかりません。フォルダアイコンから選び直してください。");
                     currentDriveFileId = null;
