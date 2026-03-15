@@ -66,7 +66,7 @@
                     </div>
                     <div>
                         <h1 class="text-lg font-black text-slate-800 tracking-tight leading-none mb-1">Travel Scrapper</h1>
-                        <p class="text-[10px] text-blue-600 font-bold uppercase tracking-[0.2em]">Web Viewer v1.6.6</p>
+                        <p class="text-[10px] text-blue-600 font-bold uppercase tracking-[0.2em]">Web Viewer v1.6.7</p>
                     </div>
                 </div>
 
@@ -144,7 +144,7 @@
                 <div>
                     <label class="block text-xs font-black text-slate-500 mb-1.5 ml-1 uppercase tracking-widest">タイトル *</label>
                     <div class="relative">
-                        <input type="text" id="addTitle" class="w-full pl-4 pr-10 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none" placeholder="例：美味しいピザ屋">
+                        <input type="text" id="addTitle" class="w-full pl-4 pr-10 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none" placeholder="例：東京駅">
                         <button type="button" id="clear_addTitle" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300 hidden"><i data-lucide="x-circle" size="20"></i></button>
                     </div>
                 </div>
@@ -234,40 +234,37 @@
         let editingMemoId = null;
 
         // --- Config & API ---
-        const apiKey = ""; // Canvas mandates this be an empty string
+        const apiKey = ""; // Canvas Provides Key automatically
         const CONFIG_READY = (typeof CONFIG !== 'undefined' && CONFIG.CLIENT_ID && !CONFIG.CLIENT_ID.includes('YOUR_'));
         const CLIENT_ID = CONFIG_READY ? CONFIG.CLIENT_ID : '';
         const DRIVE_API_KEY = CONFIG_READY ? CONFIG.API_KEY : '';
         const DISCOVERY_DOCS = ["https://www.googleapis.com/discovery/v1/apis/drive/v3/rest"];
-        const SCOPES = "https://www.googleapis.com/auth/drive";
+        const SCOPES = "https://www.googleapis.com/auth/drive.file";
 
         let tokenClient, accessToken = null, gapiInited = false, gisInited = false, actionAfterAuth = null;
 
-        // --- AI Inference Implementation ---
+        // --- AI Implementation ---
 
-        async function callGeminiAI(userPrompt, systemPrompt) {
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+        async function callGeminiAI(userQuery, systemInstruction) {
+            const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
             const payload = {
-                contents: [{ parts: [{ text: userPrompt }] }],
-                systemInstruction: { parts: [{ text: systemPrompt }] }
+                contents: [{ parts: [{ text: userQuery }] }],
+                systemInstruction: { parts: [{ text: systemInstruction }] }
             };
 
-            for (let i = 0; i <= 5; i++) {
+            for (let i = 0; i < 6; i++) {
                 try {
-                    const response = await fetch(url, {
+                    const response = await fetch(endpoint, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(payload)
                     });
-                    
                     if (!response.ok) throw new Error(`HTTP ${response.status}`);
-                    
                     const result = await response.json();
-                    return result.candidates?.[0]?.content?.parts?.[0]?.text || "";
-                } catch (error) {
-                    if (i === 5) throw error;
-                    const delay = Math.pow(2, i) * 1000;
-                    await new Promise(r => setTimeout(r, delay));
+                    return result.candidates?.[0]?.content?.parts?.[0]?.text;
+                } catch (err) {
+                    if (i === 5) throw err;
+                    await new Promise(r => setTimeout(r, Math.pow(2, i) * 1000));
                 }
             }
         }
@@ -279,7 +276,7 @@
             const mapInput = document.getElementById('addMapUrl');
 
             if (!title && !memoText) {
-                alert("タイトルかメモのどちらかを入力してください。AIがそれを手がかりに場所を探します。");
+                alert("タイトルかメモを先に入力してください。");
                 return;
             }
 
@@ -288,22 +285,21 @@
             btn.innerHTML = `<i data-lucide="loader-2" class="animate-spin" size="12"></i> 推察中...`;
             if (window.lucide) lucide.createIcons();
 
-            const sysPrompt = "あなたは旅行アシスタントです。入力されたタイトルとメモから、Googleマップの検索に使用する最適な「場所の名称」を1つだけ特定してください。出力は検索キーワードのみとし、住所、店名、ランドマーク名などを極めて簡潔に出力してください。余計な言葉（「こちらです」「キーワードは」など）は一切不要です。";
-            const userPrompt = `タイトル: ${title}\nメモ: ${memoText}`;
+            const sys = "あなたは旅行アシスタントです。入力内容からGoogleマップ検索に最適な場所の名称（店名、観光地名、駅名など）を1つ特定してください。出力は検索キーワードのみとし、挨拶や説明は一切含めないでください。";
+            const user = `タイトル: ${title}\nメモ: ${memoText}`;
 
             try {
-                const responseText = await callGeminiAI(userPrompt, sysPrompt);
-                const keyword = responseText.trim().replace(/[*#]/g, ''); // 記号除去
-                
-                if (keyword && keyword.length < 100) {
+                const result = await callGeminiAI(user, sys);
+                const keyword = result?.trim().replace(/[*#]/g, '');
+                if (keyword) {
                     mapInput.value = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(keyword)}`;
-                    document.getElementById('clear_addMapUrl').classList.remove('hidden');
+                    const clearBtn = document.getElementById('clear_addMapUrl');
+                    if(clearBtn) clearBtn.classList.remove('hidden');
                 } else {
-                    alert("具体的な場所を特定できませんでした。もう少し詳しい情報をメモに書いてみてください。");
+                    alert("場所を特定できませんでした。もう少し情報を入力してください。");
                 }
             } catch (err) {
-                console.error("AI Error:", err);
-                alert("AIとの通信に失敗しました。時間をおいて再度お試しください。");
+                alert("AIとの通信に失敗しました。時間を置いて再度お試しください。");
             } finally {
                 btn.classList.remove('btn-loading');
                 btn.innerHTML = originalInner;
@@ -324,7 +320,9 @@
             document.getElementById('fabAdd').onclick = openAddModal;
             document.getElementById('fileInput').onchange = handleLocalFileUpload;
             document.getElementById('searchInput').oninput = (e) => { searchQuery = e.target.value; render(); };
-            document.querySelector('[data-tag="all"]').onclick = () => { currentTag = 'all'; render(); };
+            const allBtn = document.querySelector('[data-tag="all"]');
+            if(allBtn) allBtn.onclick = () => { currentTag = 'all'; render(); };
+            
             document.getElementById('closeAddModalBtn').onclick = () => document.getElementById('addModal').classList.add('hidden');
             document.getElementById('saveNewMemoBtn').onclick = saveMemo;
             document.getElementById('deleteMemoBtn').onclick = deleteMemo;
@@ -399,7 +397,8 @@
         function updateDriveUI() {
             const syncText = document.getElementById('driveSyncText');
             if (syncText) syncText.textContent = currentDriveFileId ? "Drive同期" : "Driveを開く";
-            document.getElementById('logoutBtn')?.classList.toggle('hidden', !accessToken);
+            const logoutBtn = document.getElementById('logoutBtn');
+            if (logoutBtn) logoutBtn.classList.toggle('hidden', !accessToken);
         }
 
         function handleSyncClick() {
@@ -430,7 +429,7 @@
         async function fetchDriveMemos(fileId) {
             const syncBtn = document.getElementById('driveSyncBtn');
             const btnText = document.getElementById('driveSyncText');
-            const icon = syncBtn.querySelector('i');
+            const icon = syncBtn?.querySelector('i');
             
             if (btnText) btnText.textContent = "同期中...";
             if (icon) icon.classList.add('animate-spin');
@@ -447,7 +446,7 @@
             } catch (e) {
                 if (e.status === 401 || e.status === 403) {
                     accessToken = null; updateDriveUI();
-                    alert("再ログインが必要です。同期ボタンをもう一度押してください。");
+                    alert("再認証が必要です。Drive同期ボタンをもう一度押して、チェックボックスにチェックを入れたことを確認してください。");
                 }
             } finally {
                 if (btnText) btnText.textContent = currentDriveFileId ? "Drive同期" : "Driveを開く";
@@ -462,9 +461,17 @@
                     path: '/upload/drive/v3/files/' + currentDriveFileId,
                     method: 'PATCH', params: { uploadType: 'media' }, body: JSON.stringify(allMemos, null, 2)
                 });
-                await new Promise((resolve, reject) => request.execute(r => r && r.error ? reject(r.error) : resolve(r)));
+                await new Promise((resolve, reject) => request.execute(r => {
+                    if (r && r.error) reject(r.error);
+                    else resolve(r);
+                }));
                 return true;
-            } catch (err) { return false; }
+            } catch (err) {
+                if (err.code === 403 || err.status === 403) {
+                    alert("【重要】保存権限がありません！\n\nGoogleログイン時に「Googleドライブのすべてのファイルの表示、編集、作成、削除」のチェックボックスにチェックを入れ忘れている可能性があります。一度ログアウトし、再同期時にチェックを入れてください。");
+                }
+                return false;
+            }
         }
 
         // --- UI Operations ---
@@ -473,10 +480,15 @@
             editingMemoId = null;
             document.getElementById('modalTitle').textContent = '新しく場所を追加';
             document.getElementById('saveBtnText').textContent = '追加する';
-            ['addTitle', 'addUrl', 'addMapUrl', 'addText', 'addTags', 'addImageUrl'].forEach(id => document.getElementById(id).value = '');
+            ['addTitle', 'addUrl', 'addMapUrl', 'addText', 'addTags', 'addImageUrl'].forEach(id => {
+                const el = document.getElementById(id);
+                if(el) el.value = '';
+            });
             uploadedImageDataUrl = '';
-            document.getElementById('previewContainer').classList.add('hidden');
-            document.getElementById('deleteMemoBtn').classList.add('hidden'); 
+            const preview = document.getElementById('previewContainer');
+            if(preview) preview.classList.add('hidden');
+            const delBtn = document.getElementById('deleteMemoBtn');
+            if(delBtn) delBtn.classList.add('hidden'); 
             renderTagHints();
             document.getElementById('addModal').classList.remove('hidden');
             refreshClearBtns();
@@ -488,9 +500,11 @@
             if (!title) { titleInput.focus(); return; }
 
             const btn = document.getElementById('saveNewMemoBtn');
-            btn.disabled = true; document.getElementById('saveBtnText').textContent = '保存中...';
+            const btnText = document.getElementById('saveBtnText');
+            btn.disabled = true; if(btnText) btnText.textContent = '保存中...';
 
-            const image = !document.getElementById('previewContainer').classList.contains('hidden') 
+            const preview = document.getElementById('previewContainer');
+            const image = (preview && !preview.classList.contains('hidden')) 
                         ? (uploadedImageDataUrl || document.getElementById('addImageUrl').value.trim()) : null;
 
             const newMemo = {
@@ -521,9 +535,8 @@
                 render();
             } else {
                 allMemos = oldMemos;
-                alert("同期に失敗しました。認証を確認してください。");
             }
-            btn.disabled = false; document.getElementById('saveBtnText').textContent = editingMemoId ? '上書き保存' : '追加する';
+            btn.disabled = false; if(btnText) btnText.textContent = editingMemoId ? '上書き保存' : '追加する';
         }
 
         async function deleteMemo() {
@@ -536,7 +549,7 @@
                 await idbKeyval.set('travelMemos_cache', allMemos);
                 document.getElementById('addModal').classList.add('hidden');
                 render();
-            } else { allMemos = old; alert("同期エラーのため削除を戻しました。"); }
+            } else { allMemos = old; }
         }
 
         function render() {
@@ -551,7 +564,7 @@
                 container.innerHTML = `
                     <div class="col-span-full py-32 flex flex-col items-center text-center px-10 text-slate-400">
                         <i data-lucide="plane" size="48" class="mb-4 opacity-20"></i>
-                        <p class="font-medium">同期するか、右下の＋ボタンで旅のメモを追加してください。</p>
+                        <p class="font-medium">データがありません。Drive同期をするか、右下の＋ボタンで追加してください。</p>
                     </div>`;
                 if (window.lucide) lucide.createIcons();
                 return;
@@ -591,8 +604,9 @@
         window.editMemo = (id) => {
             const memo = allMemos.find(m => m.id === id); if (!memo) return;
             editingMemoId = id;
-            document.getElementById('modalTitle').textContent = 'メモを編集';
-            document.getElementById('saveBtnText').textContent = '上書き保存';
+            document.getElementById('modalTitle').textContent = '編集';
+            const saveText = document.getElementById('saveBtnText');
+            if(saveText) saveText.textContent = '上書き保存';
             document.getElementById('addTitle').value = memo.title || '';
             document.getElementById('addUrl').value = memo.url || '';
             document.getElementById('addMapUrl').value = memo.mapUrl || '';
@@ -600,15 +614,20 @@
             document.getElementById('addTags').value = (memo.tags || []).join(', ');
             
             uploadedImageDataUrl = '';
+            const preview = document.getElementById('previewContainer');
+            const imgPreview = document.getElementById('imagePreview');
+            const imgUrl = document.getElementById('addImageUrl');
+            
             if (memo.image) {
-                document.getElementById('imagePreview').src = memo.image;
-                document.getElementById('previewContainer').classList.remove('hidden');
+                if(imgPreview) imgPreview.src = memo.image;
+                if(preview) preview.classList.remove('hidden');
                 if (memo.image.startsWith('data:')) uploadedImageDataUrl = memo.image;
-                else document.getElementById('addImageUrl').value = memo.image;
+                else if(imgUrl) imgUrl.value = memo.image;
             } else { 
-                document.getElementById('previewContainer').classList.add('hidden'); 
+                if(preview) preview.classList.add('hidden'); 
             }
-            document.getElementById('deleteMemoBtn').classList.remove('hidden'); 
+            const delBtn = document.getElementById('deleteMemoBtn');
+            if(delBtn) delBtn.classList.remove('hidden'); 
             renderTagHints(); 
             document.getElementById('addModal').classList.remove('hidden');
             refreshClearBtns();
@@ -628,13 +647,15 @@
 
         function refreshClearBtns() {
             ['addTitle', 'addUrl', 'addMapUrl', 'addText', 'addImageUrl', 'addTags'].forEach(id => {
-                const val = document.getElementById(id).value;
-                document.getElementById('clear_'+id).classList.toggle('hidden', val.length === 0);
+                const el = document.getElementById(id);
+                const btn = document.getElementById('clear_'+id);
+                if(el && btn) btn.classList.toggle('hidden', el.value.length === 0);
             });
         }
 
         function setupImageLogic() {
-            document.getElementById('addImageFile').onchange = (e) => {
+            const fileIn = document.getElementById('addImageFile');
+            if(fileIn) fileIn.onchange = (e) => {
                 const file = e.target.files[0]; if (!file) return;
                 const reader = new FileReader();
                 reader.onload = (ev) => {
@@ -646,32 +667,41 @@
                         canvas.width = w; canvas.height = h;
                         canvas.getContext('2d').drawImage(img, 0, 0, w, h);
                         uploadedImageDataUrl = canvas.toDataURL('image/jpeg', 0.8);
-                        document.getElementById('imagePreview').src = uploadedImageDataUrl;
-                        document.getElementById('previewContainer').classList.remove('hidden');
-                        document.getElementById('addImageUrl').value = '';
+                        const prevImg = document.getElementById('imagePreview');
+                        if(prevImg) prevImg.src = uploadedImageDataUrl;
+                        const prevCont = document.getElementById('previewContainer');
+                        if(prevCont) prevCont.classList.remove('hidden');
+                        const urlIn = document.getElementById('addImageUrl');
+                        if(urlIn) urlIn.value = '';
                     };
                     img.src = ev.target.result;
                 };
                 reader.readAsDataURL(file);
             };
-            document.getElementById('clearPreviewBtn').onclick = () => {
-                uploadedImageDataUrl = ''; document.getElementById('previewContainer').classList.add('hidden');
+            const clearPrev = document.getElementById('clearPreviewBtn');
+            if(clearPrev) clearPrev.onclick = () => {
+                uploadedImageDataUrl = '';
+                const prev = document.getElementById('previewContainer');
+                if(prev) prev.classList.add('hidden');
             };
         }
 
         function refreshFilterTags() {
             const tags = new Set(); allMemos.forEach(m => (m.tags || []).forEach(t => tags.add(t)));
             document.querySelectorAll('.dynamic-tag').forEach(c => c.remove());
+            const list = document.getElementById('tagList');
+            if(!list) return;
             Array.from(tags).sort().forEach(tag => {
                 const btn = document.createElement('button');
                 btn.className = `dynamic-tag px-5 py-2 rounded-full text-[11px] font-black transition-all ${currentTag === tag ? 'bg-blue-600 text-white shadow-lg shadow-blue-100' : 'bg-white border border-slate-200 text-slate-500 hover:border-blue-300'}`;
                 btn.textContent = tag; btn.onclick = () => { currentTag = tag; render(); };
-                document.getElementById('tagList').appendChild(btn);
+                list.appendChild(btn);
             });
         }
 
         function renderTagHints() {
             const container = document.getElementById('existingTagsContainer');
+            if(!container) return;
             container.innerHTML = '';
             const tags = new Set(); allMemos.forEach(m => (m.tags || []).forEach(t => tags.add(t)));
             Array.from(tags).sort().forEach(tag => {
@@ -691,6 +721,7 @@
 
         function refreshTagHintStyles() {
             const input = document.getElementById('addTags');
+            if(!input) return;
             const cur = input.value.split(',').map(t => t.trim());
             document.querySelectorAll('#existingTagsContainer button').forEach(btn => {
                 const tag = btn.textContent.replace('#', '');
@@ -723,8 +754,10 @@
         }
 
         window.openLightbox = (src) => { 
-            document.getElementById('lightboxImg').src = src; 
-            document.getElementById('lightbox').classList.remove('hidden'); 
+            const img = document.getElementById('lightboxImg');
+            if(img) img.src = src; 
+            const box = document.getElementById('lightbox');
+            if(box) box.classList.remove('hidden'); 
         };
 
         window.addEventListener('load', init);
