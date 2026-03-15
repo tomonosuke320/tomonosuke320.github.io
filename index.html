@@ -57,7 +57,7 @@
                 </div>
             </div>
             <div class="flex gap-2">
-                <!-- Googleドライブボタングループ (同期とファイル選択に分割) -->
+                <!-- Googleドライブボタングループ -->
                 <div id="driveBtnGroup" class="flex items-center bg-green-50 text-green-700 rounded-xl shadow-sm opacity-50 transition-all">
                     <button id="driveSyncBtn" class="flex items-center gap-2 px-4 py-2 hover:bg-green-100 rounded-l-xl font-bold text-sm transition-colors" title="Googleドライブと同期して最新状態にする">
                         <i data-lucide="refresh-cw" size="18"></i>
@@ -256,7 +256,6 @@
                         callback: async (resp) => {
                             if (resp.error !== undefined) {
                                 console.error("Auth Error:", resp);
-                                // 自動ログイン失敗時はボタンを戻す
                                 if(actionAfterAuth === 'sync') {
                                     const btn = document.getElementById('driveSyncBtn');
                                     btn.innerHTML = `<i data-lucide="refresh-cw" size="18"></i><span class="hidden sm:inline">Drive同期</span>`;
@@ -307,6 +306,11 @@
         };
 
         function executeDriveAction() {
+            // ★重要：直接APIを叩く前に gapi.client にトークンをセットする
+            if (accessToken && gapi.client) {
+                gapi.client.setToken({ access_token: accessToken });
+            }
+
             if (actionAfterAuth === 'picker') {
                 createPicker();
             } else if (actionAfterAuth === 'sync') {
@@ -322,16 +326,21 @@
             if (typeof lucide !== 'undefined') lucide.createIcons();
 
             try {
+                // ファイルの取得を実行
                 const resp = await gapi.client.drive.files.get({ fileId: fileId, alt: 'media' });
+                
+                // 配列（JSON形式）かどうかチェック
                 if (Array.isArray(resp.result)) {
                     allMemos = resp.result;
                     currentDriveFileId = fileId;
                     saveCache();
                     render();
+                } else {
+                    throw new Error("取得したデータが正しい配列形式(JSON)ではありません。");
                 }
             } catch (e) {
                 console.error("Fetch error:", e);
-                alert("同期に失敗しました。ファイルが削除されたか権限がない可能性があります。\nフォルダアイコンから再度ファイルを選択してください。");
+                alert("同期に失敗しました。ファイルが削除されたか権限がない可能性があります。\nフォルダアイコンから再度ファイルを選択してください。\n詳細: " + (e.message || "不明なエラー"));
                 currentDriveFileId = null;
                 saveCache();
             } finally {
@@ -349,8 +358,8 @@
                 .setCallback(async (data) => {
                     if (data.action === google.picker.Action.PICKED) {
                         currentDriveFileId = data.docs[0].id; 
-                        saveCache(); // IDを保存
-                        fetchDriveData(currentDriveFileId); // データ取得と描画
+                        saveCache(); 
+                        fetchDriveData(currentDriveFileId); 
                     }
                 })
                 .build();
@@ -360,6 +369,12 @@
         // ドライブのファイルを更新（上書き保存）するロジック
         async function updateDriveFile() {
             if (!currentDriveFileId || !accessToken) return false;
+            
+            // ★重要：上書き保存時もトークンを確実にセットする
+            if (gapi.client) {
+                gapi.client.setToken({ access_token: accessToken });
+            }
+
             const content = JSON.stringify(allMemos, null, 2);
             try {
                 const request = gapi.client.request({
