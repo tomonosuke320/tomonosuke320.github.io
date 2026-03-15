@@ -5,12 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Travel Scrapper</title>
     
+    <!-- ファビコン (飛行機SVG) -->
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2003/svg' viewBox='0 0 24 24' fill='none' stroke='%232563eb' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M17.8 19.2L16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z'/></svg>">
 
-    <!-- ライブラリ群 -->
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <!-- IndexedDB Library -->
     <script src="https://cdn.jsdelivr.net/npm/idb-keyval@6/dist/umd.js"></script>
+    
+    <!-- Google API Loader -->
     <script async defer src="https://apis.google.com/js/api.js"></script>
     <script async defer src="https://accounts.google.com/gsi/client"></script>
 
@@ -24,16 +30,10 @@
             background-color: #f1f5f9;
             -webkit-tap-highlight-color: transparent;
         }
-        .memo-grid {
-            column-count: 1;
-            column-gap: 1.5rem;
-        }
+        .memo-grid { column-count: 1; column-gap: 1.5rem; }
         @media (min-width: 768px) { .memo-grid { column-count: 2; } }
         @media (min-width: 1024px) { .memo-grid { column-count: 3; } }
-        .memo-item {
-            break-inside: avoid;
-            margin-bottom: 1.5rem;
-        }
+        .memo-item { break-inside: avoid; margin-bottom: 1.5rem; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
@@ -71,7 +71,7 @@
                     </div>
                     <div>
                         <h1 class="text-lg font-black text-slate-800 tracking-tight leading-none mb-1">Travel Scrapper</h1>
-                        <p class="text-[10px] text-blue-600 font-bold uppercase tracking-[0.2em]">Web Viewer v1.6.9</p>
+                        <p class="text-[10px] text-blue-600 font-bold uppercase tracking-[0.2em]">Web Viewer v2.1</p>
                     </div>
                 </div>
 
@@ -89,27 +89,21 @@
             <div class="flex flex-wrap items-center gap-2">
                 <div class="flex items-center gap-1 p-1 bg-slate-50 rounded-xl border border-slate-100">
                     <button id="drivePickerBtn" class="flex items-center gap-1.5 px-3 py-2 text-green-700 font-bold text-xs hover:bg-white rounded-lg transition-colors">
-                        <i data-lucide="folder-open" size="16"></i>
-                        <span>ファイル選択</span>
+                        <i data-lucide="folder-open" size="16"></i><span>選択</span>
                     </button>
                     <div class="w-px h-4 bg-slate-200"></div>
                     <label for="fileInput" class="flex items-center gap-1.5 px-3 py-2 text-slate-600 font-bold text-xs hover:bg-white rounded-lg transition-colors cursor-pointer">
-                        <i data-lucide="file-up" size="16"></i>
-                        <span>ローカル読込</span>
+                        <i data-lucide="file-up" size="16"></i><span>読込</span>
                     </label>
                     <input type="file" id="fileInput" accept=".json" class="hidden" />
                 </div>
-
                 <div class="flex-1"></div>
-
                 <div class="flex items-center gap-1">
                     <button id="logoutBtn" class="hidden flex items-center gap-1.5 px-3 py-2 text-red-600 font-bold text-xs hover:bg-red-50 rounded-lg transition-colors">
-                        <i data-lucide="log-out" size="16"></i>
-                        <span>ログアウト</span>
+                        <i data-lucide="log-out" size="16"></i><span>ログアウト</span>
                     </button>
                     <button id="clearDataBtn" class="flex items-center gap-1.5 px-3 py-2 text-slate-400 font-bold text-xs hover:text-red-500 rounded-lg transition-colors">
-                        <i data-lucide="trash-2" size="16"></i>
-                        <span>初期化</span>
+                        <i data-lucide="trash-2" size="16"></i><span>初期化</span>
                     </button>
                 </div>
             </div>
@@ -154,59 +148,67 @@
                 <div>
                     <label class="block text-xs font-black text-slate-500 mb-1.5 ml-1 uppercase tracking-widest">タイトル *</label>
                     <div class="relative">
-                        <input type="text" id="addTitle" class="w-full pl-4 pr-10 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none" placeholder="例：美味しいピザ屋">
+                        <input type="text" id="addTitle" class="w-full pl-4 pr-10 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none" placeholder="例：中華そば 高野">
                         <button type="button" id="clear_addTitle" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300 hidden"><i data-lucide="x-circle" size="20"></i></button>
                     </div>
                 </div>
                 
-                <div class="grid grid-cols-1 gap-4">
-                    <div>
-                        <label class="block text-[10px] font-black text-slate-500 mb-1.5 ml-1 uppercase tracking-widest">公式サイトURL (任意)</label>
-                        <div class="relative">
-                            <input type="url" id="addUrl" class="w-full pl-4 pr-10 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none text-sm" placeholder="https://...">
-                            <button type="button" id="clear_addUrl" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300 hidden"><i data-lucide="x-circle" size="18"></i></button>
-                        </div>
-                    </div>
-                    <div>
-                        <div class="flex justify-between items-center mb-1.5 ml-1">
-                            <label class="block text-[10px] font-black text-blue-600 uppercase tracking-widest flex items-center gap-1">
-                                <i data-lucide="map-pin" size="12"></i> Googleマップ
-                            </label>
-                            <button type="button" id="generateMapBtn" class="text-[10px] font-bold bg-blue-100 text-blue-700 px-3 py-1 rounded-lg hover:bg-blue-200 transition-all flex items-center gap-1">
-                                <i data-lucide="sparkles" size="12"></i> AIで場所を推察
-                            </button>
-                        </div>
-                        <div class="relative">
-                            <input type="url" id="addMapUrl" class="w-full pl-4 pr-10 py-3 bg-blue-50 border border-blue-100 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none text-sm text-blue-800 font-medium" placeholder="タイトルやメモから場所を探します">
-                            <button type="button" id="clear_addMapUrl" class="absolute right-3 top-1/2 -translate-y-1/2 text-blue-300 hidden"><i data-lucide="x-circle" size="18"></i></button>
-                        </div>
+                <div>
+                    <label class="block text-[10px] font-black text-slate-500 mb-1.5 ml-1 uppercase tracking-widest">公式サイト・食べログ等のURL (任意)</label>
+                    <div class="relative">
+                        <input type="url" id="addUrl" class="w-full pl-4 pr-10 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none text-sm" placeholder="https://...">
+                        <button type="button" id="clear_addUrl" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300 hidden"><i data-lucide="x-circle" size="18"></i></button>
                     </div>
                 </div>
 
                 <div>
                     <label class="block text-xs font-black text-slate-500 mb-1.5 ml-1 uppercase tracking-widest">メモ</label>
                     <div class="relative">
-                        <textarea id="addText" rows="3" class="w-full pl-4 pr-10 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none resize-none leading-relaxed text-sm" placeholder="場所のヒントなどを書くとAIが見つけやすくなります"></textarea>
+                        <textarea id="addText" rows="3" class="w-full pl-4 pr-10 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none resize-none leading-relaxed text-sm" placeholder="感想など"></textarea>
                         <button type="button" id="clear_addText" class="absolute right-3 top-4 text-slate-300 hidden"><i data-lucide="x-circle" size="20"></i></button>
                     </div>
                 </div>
                 
-                <div>
-                    <label class="block text-xs font-black text-slate-500 mb-1.5 ml-1 uppercase tracking-widest">画像</label>
+                <!-- マップ 推察ボタン＆入力 -->
+                <div class="pt-2">
+                    <div class="flex justify-between items-center mb-1.5 ml-1">
+                        <label class="block text-[10px] font-black text-blue-600 uppercase tracking-widest flex items-center gap-1">
+                            <i data-lucide="map-pin" size="12"></i> Googleマップ
+                        </label>
+                        <button type="button" id="generateMapBtn" class="text-[10px] font-bold bg-blue-100 text-blue-700 px-3 py-1 rounded-lg hover:bg-blue-200 transition-all flex items-center gap-1">
+                            <i data-lucide="sparkles" size="12"></i> AI推察
+                        </button>
+                    </div>
+                    <div class="relative">
+                        <input type="url" id="addMapUrl" class="w-full pl-4 pr-10 py-3 bg-blue-50 border border-blue-100 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none text-sm text-blue-800 font-medium" placeholder="タイトルやURLから場所を探します">
+                        <button type="button" id="clear_addMapUrl" class="absolute right-3 top-1/2 -translate-y-1/2 text-blue-300 hidden"><i data-lucide="x-circle" size="18"></i></button>
+                    </div>
+                </div>
+
+                <!-- 画像 推察ボタン＆入力 -->
+                <div class="pt-2">
+                    <div class="flex justify-between items-center mb-1.5 ml-1">
+                        <label class="block text-xs font-black text-slate-500 uppercase tracking-widest flex items-center gap-1">
+                            画像
+                        </label>
+                        <button type="button" id="generateImageBtn" class="text-[10px] font-bold bg-indigo-100 text-indigo-700 px-3 py-1 rounded-lg hover:bg-indigo-200 transition-all flex items-center gap-1">
+                            <i data-lucide="image" size="12"></i> AIで画像を探す
+                        </button>
+                    </div>
                     <div class="space-y-3">
                         <div class="relative">
-                            <input type="url" id="addImageUrl" class="w-full pl-4 pr-10 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none text-sm" placeholder="URL">
+                            <input type="url" id="addImageUrl" class="w-full pl-4 pr-10 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none text-sm" placeholder="URLを手動入力、またはAIで取得">
                             <button type="button" id="clear_addImageUrl" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300 hidden"><i data-lucide="x-circle" size="20"></i></button>
                         </div>
                         <div class="flex items-center gap-3 pl-1">
                             <span class="text-[10px] font-bold text-slate-300 uppercase">Or</span>
                             <label class="flex items-center gap-2 px-4 py-2 bg-white text-slate-600 rounded-xl cursor-pointer hover:bg-slate-50 border border-slate-200 text-xs font-bold shadow-sm transition-colors">
-                                <i data-lucide="image-plus" size="16"></i> 写真を選択
+                                <i data-lucide="upload" size="16"></i> 写真をアップロード
                                 <input type="file" id="addImageFile" accept="image/*" class="hidden">
                             </label>
                         </div>
                         <div id="previewContainer" class="relative hidden">
-                            <img id="imagePreview" src="" class="w-full h-40 object-cover rounded-2xl border border-slate-200 shadow-sm">
+                            <img id="imagePreview" src="" class="w-full h-40 object-cover rounded-2xl border border-slate-200 shadow-sm" onerror="this.onerror=null; this.src=''; this.parentElement.classList.add('hidden'); alert('画像の取得に失敗しました。リンク切れの可能性があります。');">
                             <button type="button" id="clearPreviewBtn" class="absolute top-2 right-2 p-1.5 bg-slate-900/60 text-white rounded-full backdrop-blur-sm shadow-lg"><i data-lucide="x" size="16"></i></button>
                         </div>
                     </div>
@@ -221,9 +223,9 @@
                     <div id="existingTagsContainer" class="flex flex-wrap gap-2 pl-1"></div>
                 </div>
 
-                <div class="flex gap-3 pt-4">
+                <div class="flex gap-3 pt-4 border-t border-slate-100">
                     <button id="deleteMemoBtn" type="button" class="hidden px-5 py-4 bg-red-50 text-red-500 rounded-2xl font-bold hover:bg-red-100 transition-colors"><i data-lucide="trash-2" size="20"></i></button>
-                    <button id="saveNewMemoBtn" type="button" class="flex-1 py-4 bg-blue-600 text-white rounded-2xl font-black flex items-center justify-center gap-2 hover:bg-blue-700 active:scale-95 transition-all shadow-lg shadow-blue-100"><i data-lucide="save" size="20"></i><span id="saveBtnText">保存する</span></button>
+                    <button id="saveNewMemoBtn" type="button" class="flex-1 py-4 bg-slate-800 text-white rounded-2xl font-black flex items-center justify-center gap-2 hover:bg-slate-900 active:scale-95 transition-all shadow-lg"><i data-lucide="save" size="20"></i><span id="saveBtnText">保存する</span></button>
                 </div>
             </div>
         </div>
@@ -233,14 +235,14 @@
     <div id="settingsModal" class="fixed inset-0 z-[70] hidden flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
         <div class="bg-white w-full max-w-sm rounded-[2rem] p-6 shadow-2xl modal-enter">
             <h2 class="text-lg font-black text-slate-800 mb-4 flex items-center gap-2">
-                <i data-lucide="settings" size="20"></i> アプリ設定
+                <i data-lucide="settings" size="20"></i> API設定
             </h2>
             <div class="space-y-4">
                 <div>
                     <label class="block text-xs font-black text-slate-500 mb-1.5 uppercase tracking-widest">Gemini API Key</label>
                     <input type="password" id="geminiApiKeyInput" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 text-sm" placeholder="AI Studioのキーを入力">
                     <p class="text-[10px] text-slate-400 mt-2 leading-relaxed">
-                        ※GitHub Pages等の公開サイトでAI推察機能を使う場合に必要です。<br>入力したキーはご利用のブラウザにのみ保存されます。
+                        ※AI推察機能を使う場合に必要です。<br>入力したキーはご利用のブラウザにのみ安全に保存されます。
                     </p>
                 </div>
                 <button id="saveSettingsBtn" class="w-full py-3 bg-slate-800 text-white rounded-xl font-bold hover:bg-slate-900 transition-colors">設定を保存</button>
@@ -264,8 +266,8 @@
         let editingMemoId = null;
 
         // --- Config & API ---
-        const apiKey = ""; // Canvas Provides Key automatically (MUST BE EMPTY)
-        let userSetGeminiKey = ""; // 設定から入力されたAPIキー
+        const apiKey = ""; // Canvas Provides Key automatically
+        let userSetGeminiKey = ""; 
 
         const CONFIG_READY = (typeof CONFIG !== 'undefined' && CONFIG.CLIENT_ID && !CONFIG.CLIENT_ID.includes('YOUR_'));
         const CLIENT_ID = CONFIG_READY ? CONFIG.CLIENT_ID : '';
@@ -279,7 +281,7 @@
         function showMsg(message, isError = false) {
             const container = document.getElementById('toastContainer');
             const toast = document.createElement('div');
-            toast.className = `px-6 py-3 rounded-full text-sm font-bold shadow-xl transition-all duration-300 opacity-0 translate-y-4 ${isError ? 'bg-red-600 text-white' : 'bg-slate-800 text-white'}`;
+            toast.className = `px-6 py-3 rounded-full text-sm font-bold shadow-2xl transition-all duration-300 opacity-0 translate-y-4 ${isError ? 'bg-red-600 text-white' : 'bg-slate-800 text-white border border-slate-700'}`;
             toast.textContent = message;
             container.appendChild(toast);
             
@@ -303,74 +305,151 @@
             };
         }
 
-        // --- AI Implementation ---
-        async function callGeminiAI(userQuery, systemInstruction) {
-            // ユーザー設定キーがあれば優先、なければ空文字(Canvas環境の自動補完に任せる)
-            const keyToUse = userSetGeminiKey || apiKey;
-
-            // 注意: Canvas環境では空文字のままリクエストする必要があるため、ここで空チェックのエラー出しは行いません。
-
+        // --- AI Implementation (フォールバック付き) ---
+        
+        // 実際のAPIリクエスト処理
+        async function fetchGemini(userQuery, systemInstruction, useGrounding) {
+            const keyToUse = userSetGeminiKey || apiKey || "";
             const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${keyToUse}`;
+            
             const payload = {
                 contents: [{ parts: [{ text: userQuery }] }],
                 systemInstruction: { parts: [{ text: systemInstruction }] }
             };
 
-            for (let i = 0; i < 6; i++) {
-                try {
-                    const response = await fetch(endpoint, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
-                    });
-                    
-                    if (response.status === 400 || response.status === 403) {
-                        throw new Error(`APIキーが設定されていないか、無効です。設定(歯車)から入力してください。`);
-                    }
-                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-                    
-                    const result = await response.json();
-                    return result.candidates?.[0]?.content?.parts?.[0]?.text;
-                } catch (err) {
-                    if (err.message.includes("APIキー")) throw err; // 権限エラーならすぐ投げる
-                    if (i === 5) throw err;
-                    await new Promise(r => setTimeout(r, Math.pow(2, i) * 1000));
-                }
+            // Grounding (Google Search) を追加
+            if (useGrounding) {
+                payload.tools = [{ google_search: {} }];
             }
+
+            const response = await fetch(endpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+            
+            const result = await response.json();
+            return result.candidates?.[0]?.content?.parts?.[0]?.text;
         }
 
+        // リトライ＆フォールバック制御付きの呼び出し
+        async function safeCallGemini(userQuery, systemInstruction) {
+            let lastError = null;
+            
+            // 1. まずは検索(Grounding)ありで試す
+            for (let i = 0; i < 2; i++) {
+                try {
+                    return await fetchGemini(userQuery, systemInstruction, true);
+                } catch (err) {
+                    lastError = err;
+                    if (err.message.includes('400') || err.message.includes('403') || err.message.includes('404')) {
+                        // Grounding非対応や権限エラーの場合はすぐ抜けてフォールバックへ
+                        break;
+                    }
+                    await new Promise(r => setTimeout(r, 1000));
+                }
+            }
+            
+            console.warn("Grounding request failed, trying without search...", lastError);
+            
+            // 2. 失敗した場合、検索(Grounding)なしで再試行する
+            for (let i = 0; i < 3; i++) {
+                try {
+                    return await fetchGemini(userQuery, systemInstruction, false);
+                } catch (err) {
+                    lastError = err;
+                    if (err.message.includes('400') || err.message.includes('403')) {
+                        throw new Error("APIキーが無効です。設定(歯車)から確認してください。");
+                    }
+                    await new Promise(r => setTimeout(r, 1500));
+                }
+            }
+            
+            throw new Error("通信に失敗しました。少し時間をおいてください。");
+        }
+
+        // マップ推察
         async function handleAiMapGeneration() {
             const title = document.getElementById('addTitle').value.trim();
+            const url = document.getElementById('addUrl').value.trim();
             const memoText = document.getElementById('addText').value.trim();
             const btn = document.getElementById('generateMapBtn');
             const mapInput = document.getElementById('addMapUrl');
 
-            if (!title && !memoText) {
-                showMsg("タイトルかメモを先に入力してください。", true);
+            if (!title && !memoText && !url) {
+                showMsg("タイトル、URL、メモのいずれかを入力してください。", true);
                 return;
             }
 
             btn.classList.add('btn-loading');
             const originalInner = btn.innerHTML;
-            btn.innerHTML = `<i data-lucide="loader-2" class="animate-spin" size="12"></i> 推察中...`;
+            btn.innerHTML = `<i data-lucide="loader-2" class="animate-spin" size="12"></i> 検索中...`;
             if (window.lucide) lucide.createIcons();
 
-            const sys = "旅行メモの内容からGoogleマップ検索に最適な場所の名称（店名、観光地名、駅名など）を1つ特定してください。出力は検索キーワードのみ。";
-            const user = `タイトル: ${title}\nメモ: ${memoText}`;
+            const sys = "旅行メモの内容からGoogleマップ検索に最適な場所の名称（店名、観光地名、駅名など）を1つ特定してください。出力は検索キーワードのみ。URLが提供されている場合は、そのURLが示す実際の場所の名前を出力してください。";
+            const user = `タイトル: ${title}\nURL: ${url}\nメモ: ${memoText}`;
 
             try {
-                const result = await callGeminiAI(user, sys);
+                const result = await safeCallGemini(user, sys);
                 const keyword = result?.trim().replace(/[*#]/g, '');
-                if (keyword) {
+                if (keyword && keyword.length < 100) {
                     mapInput.value = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(keyword)}`;
-                    const clearBtn = document.getElementById('clear_addMapUrl');
-                    if(clearBtn) clearBtn.classList.remove('hidden');
-                    showMsg("場所を推測しました");
+                    document.getElementById('clear_addMapUrl')?.classList.remove('hidden');
+                    showMsg("マップの場所を推察しました");
                 } else {
                     showMsg("場所を特定できませんでした。", true);
                 }
             } catch (err) {
-                console.error(err);
+                showMsg(err.message, true);
+            } finally {
+                btn.classList.remove('btn-loading');
+                btn.innerHTML = originalInner;
+                if (window.lucide) lucide.createIcons();
+            }
+        }
+
+        // 画像推察
+        async function handleAiImageGeneration() {
+            const title = document.getElementById('addTitle').value.trim();
+            const url = document.getElementById('addUrl').value.trim();
+            const memoText = document.getElementById('addText').value.trim();
+            const btn = document.getElementById('generateImageBtn');
+            const imgInput = document.getElementById('addImageUrl');
+            const previewCont = document.getElementById('previewContainer');
+            const imgPreview = document.getElementById('imagePreview');
+
+            if (!title && !memoText && !url) {
+                showMsg("タイトル、URL、メモのいずれかを入力してください。", true);
+                return;
+            }
+
+            btn.classList.add('btn-loading');
+            const originalInner = btn.innerHTML;
+            btn.innerHTML = `<i data-lucide="loader-2" class="animate-spin" size="12"></i> 検索中...`;
+            if (window.lucide) lucide.createIcons();
+
+            const sys = "入力された旅行先（店舗や観光地）の、実際の写真・画像のURLをインターネット検索して1つだけ提供してください。出力は画像のURL（httpで始まる文字列）のみとし、他の文字やMarkdownは絶対に含めないでください。食べログなどのURLが入力されている場合は、そのサイト内の画像URLを優先して取得してください。";
+            const user = `タイトル: ${title}\nURL: ${url}\nメモ: ${memoText}`;
+
+            try {
+                const result = await safeCallGemini(user, sys);
+                const imageUrl = result?.trim().replace(/[*#]/g, '');
+                
+                if (imageUrl && imageUrl.startsWith('http')) {
+                    imgInput.value = imageUrl;
+                    uploadedImageDataUrl = ''; // ローカル画像をリセット
+                    imgPreview.src = imageUrl;
+                    previewCont.classList.remove('hidden');
+                    document.getElementById('clear_addImageUrl')?.classList.remove('hidden');
+                    showMsg("画像を挿入しました");
+                } else {
+                    showMsg("適切な画像が見つかりませんでした。", true);
+                }
+            } catch (err) {
                 showMsg(err.message, true);
             } finally {
                 btn.classList.remove('btn-loading');
@@ -411,6 +490,7 @@
             document.getElementById('driveSyncBtn').onclick = handleSyncClick;
             document.getElementById('drivePickerBtn').onclick = handlePickerClick;
             document.getElementById('generateMapBtn').onclick = handleAiMapGeneration;
+            document.getElementById('generateImageBtn').onclick = handleAiImageGeneration;
 
             // 設定モーダル
             document.getElementById('openSettingsBtn').onclick = () => document.getElementById('settingsModal').classList.remove('hidden');
@@ -525,7 +605,6 @@
             const iconWrapper = document.getElementById('syncIconWrapper');
             
             if (btnText) btnText.textContent = "同期中...";
-            // アイコン自体(i/svg)ではなく、親要素(span)を回すことで置換されても止まるようにする
             if (iconWrapper) iconWrapper.classList.add('animate-spin');
             
             try {
@@ -782,6 +861,7 @@
                 uploadedImageDataUrl = '';
                 const prev = document.getElementById('previewContainer');
                 if(prev) prev.classList.add('hidden');
+                document.getElementById('addImageUrl').value = '';
             };
         }
 
