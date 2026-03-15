@@ -4,8 +4,8 @@
 
 const CONFIG = {
     // あなたのクライアントIDを貼り付けてください
-    CLIENT_ID: '', 
+    CLIENT_ID: '197171881671-2cei9fbci402sh1369k78kq7vd4vqkpl.apps.googleusercontent.com', 
     
     // あなたのAPIキーを貼り付けてください
-    API_KEY: ''    
+    API_KEY: 'AIzaSyA3xblejmOFIxZhBHoMwBaM5gGvufS0p6Y'    
 };
