@@ -13,6 +13,9 @@
     <script async defer src="https://apis.google.com/js/api.js"></script>
     <script async defer src="https://accounts.google.com/gsi/client"></script>
 
+    <!-- ★ 分離した設定ファイル(config.js)を読み込む -->
+    <script src="config.js"></script>
+
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&display=swap');
         body { 
@@ -101,7 +104,7 @@
         </div>
     </main>
 
-    <!-- ★常に表示されるフローティングアクションボタン (メモ追加) -->
+    <!-- 常に表示されるフローティングアクションボタン (メモ追加) -->
     <button id="fabAdd" class="fixed bottom-6 right-6 w-14 h-14 bg-blue-600 text-white rounded-full shadow-lg shadow-blue-300 flex items-center justify-center hover:bg-blue-700 transition-transform active:scale-90 z-50">
         <i data-lucide="plus" size="28"></i>
     </button>
@@ -155,11 +158,12 @@
         let allMemos = [];
         let currentTag = 'all';
         let searchQuery = '';
-        let currentDriveFileId = null; // 現在開いているGoogle DriveのファイルID
+        let currentDriveFileId = null; 
 
         // --- Google Drive 設定 ---
-        const CLIENT_ID = ''; // ★ここに設定
-        const API_KEY = '';   // ★ここに設定
+        // config.js から読み込みます
+        const CLIENT_ID = typeof CONFIG !== 'undefined' ? CONFIG.CLIENT_ID : '';
+        const API_KEY = typeof CONFIG !== 'undefined' ? CONFIG.API_KEY : '';
         
         // アプリで開いたファイルを編集できる権限
         const DISCOVERY_DOCS = ["https://www.googleapis.com/discovery/v1/apis/drive/v3/rest"];
@@ -173,7 +177,7 @@
         // --- Google Drive 連携ロジック ---
         async function tryInitGoogleApi() {
             if (!API_KEY || !CLIENT_ID) {
-                console.warn("CLIENT_ID or API_KEY is missing.");
+                console.warn("CLIENT_ID or API_KEY is missing. Check config.js.");
                 return;
             }
             try {
@@ -212,7 +216,7 @@
 
         function handleDriveOpen() {
             if (!CLIENT_ID || !API_KEY) {
-                alert("Google Drive連携を使用するには、HTML内のCLIENT_IDとAPI_KEYを設定してください。");
+                alert("Google Drive連携を使用するには、config.jsにCLIENT_IDとAPI_KEYを設定してください。");
                 return;
             }
             if (!accessToken) {
@@ -230,7 +234,7 @@
                 .setDeveloperKey(API_KEY)
                 .setCallback(async (data) => {
                     if (data.action === google.picker.Action.PICKED) {
-                        currentDriveFileId = data.docs[0].id; // 選択したファイルIDを保持
+                        currentDriveFileId = data.docs[0].id; 
                         try {
                             const resp = await gapi.client.drive.files.get({ fileId: currentDriveFileId, alt: 'media' });
                             if (Array.isArray(resp.result)) {
@@ -281,7 +285,7 @@
             }
         }
 
-        // --- ★新規メモ追加ロジック ---
+        // --- 新規メモ追加ロジック ---
         document.getElementById('fabAdd').onclick = () => {
             // ドライブのファイルを読み込んでいない場合は追加をブロック
             if (!currentDriveFileId) {
@@ -428,7 +432,6 @@
                     const data = JSON.parse(event.target.result);
                     if (Array.isArray(data)) { 
                         allMemos = data; 
-                        // ローカルファイル読込時はDriveのIDをリセットする（上書き保存させないため）
                         currentDriveFileId = null; 
                         render(); 
                     }
@@ -454,3 +457,5 @@
     </script>
 </body>
 </html>
+
+
