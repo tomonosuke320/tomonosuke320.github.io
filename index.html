@@ -68,7 +68,7 @@
                     </div>
                     <div>
                         <h1 class="text-lg font-black text-slate-800 tracking-tight leading-none mb-1">Travel Scrapper</h1>
-                        <p class="text-[10px] text-blue-600 font-bold uppercase tracking-[0.2em]">Web Viewer v2.4 Copy&Paste</p>
+                        <p class="text-[10px] text-blue-600 font-bold uppercase tracking-[0.2em]">Web Viewer v2.5 Auto-Search</p>
                     </div>
                 </div>
 
@@ -185,14 +185,14 @@
                     </div>
                 </div>
 
-                <!-- 画像 推察＆ペースト -->
+                <!-- 画像 自動検索＆ペースト -->
                 <div class="pt-2 border-t border-slate-100">
                     <div class="flex justify-between items-center mb-1.5 ml-1 pt-2">
                         <label class="block text-xs font-black text-slate-500 uppercase tracking-widest flex items-center gap-1">
                             画像 <span class="text-[9px] font-medium text-slate-400 normal-case">(直接ペースト可能)</span>
                         </label>
                         <button type="button" id="generateImageBtn" class="text-[10px] font-bold bg-indigo-600 text-white px-3 py-1.5 rounded-lg hover:bg-indigo-700 transition-all flex items-center gap-1 shadow-md shadow-indigo-200">
-                            <i data-lucide="sparkles" size="12"></i> AIで画像を探す
+                            <i data-lucide="sparkles" size="12"></i> AIで画像を自動挿入
                         </button>
                     </div>
                     
@@ -202,7 +202,7 @@
                             <button type="button" id="clear_addImageUrl" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300 hidden"><i data-lucide="x-circle" size="20"></i></button>
                         </div>
                         
-                        <!-- ★ 画像検索へ飛ぶボタン (最初は非表示) -->
+                        <!-- ★ 画像検索へ飛ぶボタン -->
                         <button type="button" id="searchLinkBtn" class="hidden w-full text-[11px] font-bold bg-white border border-slate-200 text-slate-600 px-4 py-2.5 rounded-xl hover:bg-slate-50 transition-all flex items-center justify-center gap-1.5 shadow-sm">
                             <i data-lucide="search" size="14"></i> Google画像検索で他の写真を探す
                         </button>
@@ -275,7 +275,7 @@
         let editingMemoId = null;
 
         // --- Config & API ---
-        const apiKey = ""; // Canvas Provides Key automatically (MUST BE EMPTY)
+        const apiKey = ""; // Canvas Provides Key automatically
         let userSetGeminiKey = ""; 
 
         const CONFIG_READY = (typeof CONFIG !== 'undefined' && CONFIG.CLIENT_ID && !CONFIG.CLIENT_ID.includes('YOUR_'));
@@ -286,7 +286,7 @@
 
         let tokenClient, accessToken = null, gapiInited = false, gisInited = false, actionAfterAuth = null;
 
-        // --- Utils: Custom Toast & Confirm ---
+        // --- Utils ---
         function showMsg(message, isError = false) {
             const container = document.getElementById('toastContainer');
             const toast = document.createElement('div');
@@ -318,6 +318,48 @@
             if (!url) return '';
             if (url.startsWith('data:') || url.startsWith('[')) return url;
             return `https://wsrv.nl/?url=${encodeURIComponent(url)}`;
+        }
+
+        // --- Web Scraping (Google Image Search) ---
+        // Google画像検索のHTMLを裏側で取得し、1枚目のサムネイル画像を抽出する魔法の関数
+        async function fetchFirstImageFromGoogle(keyword) {
+            const searchUrl = `https://www.google.com/search?tbm=isch&q=${encodeURIComponent(keyword)}`;
+            // CORS回避のためのプロキシ
+            const proxies = [
+                `https://api.allorigins.win/get?url=${encodeURIComponent(searchUrl)}`,
+                `https://corsproxy.io/?${encodeURIComponent(searchUrl)}`
+            ];
+            
+            for (const proxyUrl of proxies) {
+                try {
+                    const response = await fetch(proxyUrl);
+                    if (!response.ok) continue;
+                    
+                    let html = "";
+                    if (proxyUrl.includes("allorigins")) {
+                        const data = await response.json();
+                        html = data.contents;
+                    } else {
+                        html = await response.text();
+                    }
+                    
+                    // HTML内からサムネイル画像(encrypted-tbn0.gstatic.com/images)のURLを抽出
+                    const regex = /src=["'](https:\/\/encrypted-tbn0\.gstatic\.com\/images\?q=tbn:[^"'\\]+)["'\\]/g;
+                    let match;
+                    const images = [];
+                    while ((match = regex.exec(html)) !== null) {
+                        images.push(match[1]);
+                    }
+                    
+                    if (images.length > 0) {
+                        // 0番目は検索アイコン等の場合があるため、1番目を優先
+                        return images.length > 1 ? images[1] : images[0];
+                    }
+                } catch (e) {
+                    console.warn("Proxy scrape failed:", proxyUrl, e);
+                }
+            }
+            return null; // 取得失敗
         }
 
         // --- AI Implementation ---
@@ -395,7 +437,7 @@
             }
         }
 
-        // ★ 画像の自動挿入 ＆ 検索アシスト
+        // ★ 画像の自動挿入（スクレイピング） ＆ 検索アシスト
         async function handleAiImageGeneration() {
             const title = document.getElementById('addTitle').value.trim();
             const url = document.getElementById('addUrl').value.trim();
@@ -413,31 +455,39 @@
 
             btn.classList.add('btn-loading');
             const originalInner = btn.innerHTML;
-            btn.innerHTML = `<i data-lucide="loader-2" class="animate-spin" size="12"></i> 画像と検索ワードを作成中...`;
+            btn.innerHTML = `<i data-lucide="loader-2" class="animate-spin" size="12"></i> 最適な画像を検索中...`;
             if (window.lucide) lucide.createIcons();
 
             const sys = "入力された旅行先（店舗や観光地）の写真をGoogle画像検索で探すための、最も精度の高いキーワードを生成してください。出力はキーワードのみ。地域名や店名を具体的に含めてください（例: '横浜 大口 中華そば高野 ラーメン'）。";
             const user = `タイトル: ${title}\nURL: ${url}\nメモ: ${memoText}`;
 
             try {
+                // 1. AIに超高精度なキーワードを生成させる
                 const result = await safeCallGemini(user, sys);
                 const keyword = result?.trim().replace(/[*#]/g, '');
                 
                 if (keyword) {
-                    // 1. 自動挿入 (Canvas環境でのみプレースホルダ画像に変換される魔法のタグ)
-                    const imageTag = ``;
-                    imgInput.value = imageTag;
+                    // 2. そのキーワードでGoogle画像検索の裏側をスクレイピングして画像URLを1枚引っこ抜く
+                    let imageUrl = await fetchFirstImageFromGoogle(keyword);
+                    
+                    // 3. スクレイピング失敗時は、これまで通りのプレースホルダータグにフォールバック
+                    if (!imageUrl) {
+                        imageUrl = ``;
+                    }
+                    
+                    // 画面にセット
+                    imgInput.value = imageUrl;
                     uploadedImageDataUrl = ''; 
                     
-                    imgPreview.src = imageTag;
+                    imgPreview.src = getProxyImageUrl(imageUrl);
                     previewCont.classList.remove('hidden');
                     document.getElementById('clear_addImageUrl')?.classList.remove('hidden');
 
-                    // 2. 他の画像を探すための検索ボタンを表示・設定
+                    // 4. 「他の画像を探す」検索ボタンを表示・設定
                     searchLinkBtn.onclick = () => window.open(`https://www.google.com/search?tbm=isch&q=${encodeURIComponent(keyword)}`, '_blank');
                     searchLinkBtn.classList.remove('hidden');
 
-                    showMsg("画像を自動挿入しました。違う画像が良い場合は検索ボタンから探してペーストしてください！");
+                    showMsg("Google検索から画像を自動挿入しました！気に入らなければ下のボタンから探せます。");
                 } else {
                     showMsg("キーワードを生成できませんでした。", true);
                 }
@@ -452,7 +502,6 @@
 
         // --- Image File & Paste Handling ---
         
-        // 画像ファイルを読み込んでBase64化する共通関数
         function processImageFile(file) {
             if (!file) return;
             const reader = new FileReader();
@@ -485,13 +534,11 @@
         }
 
         function setupImageLogic() {
-            // ファイル選択からのアップロード
             const fileIn = document.getElementById('addImageFile');
             if(fileIn) fileIn.onchange = (e) => {
                 processImageFile(e.target.files[0]);
             };
 
-            // プレビュースリア
             const clearPrev = document.getElementById('clearPreviewBtn');
             if(clearPrev) clearPrev.onclick = () => {
                 uploadedImageDataUrl = '';
@@ -501,7 +548,6 @@
                 document.getElementById('searchLinkBtn').classList.add('hidden');
             };
             
-            // 手動でURLが入力された時のプレビュー更新
             const urlInput = document.getElementById('addImageUrl');
             if(urlInput) {
                 urlInput.addEventListener('input', (e) => {
@@ -518,9 +564,8 @@
                 });
             }
 
-            // ★ クリップボードからの「直接ペースト(Ctrl+V)」イベントを監視
+            // ★ クリップボードからの直接ペースト(Ctrl+V)対応
             document.addEventListener('paste', (e) => {
-                // モーダルが開いている時のみ反応させる
                 if (document.getElementById('addModal').classList.contains('hidden')) return;
                 
                 const items = (e.clipboardData || e.originalEvent.clipboardData).items;
@@ -529,7 +574,6 @@
                     if (item.kind === 'file' && item.type.startsWith('image/')) {
                         const file = item.getAsFile();
                         processImageFile(file);
-                        // デフォルトのペースト挙動(テキスト入力など)をキャンセル
                         e.preventDefault(); 
                         break;
                     }
@@ -746,7 +790,7 @@
             if(preview) preview.classList.add('hidden');
             const delBtn = document.getElementById('deleteMemoBtn');
             if(delBtn) delBtn.classList.add('hidden'); 
-            document.getElementById('searchLinkBtn').classList.add('hidden'); // 検索ボタン隠す
+            document.getElementById('searchLinkBtn').classList.add('hidden');
             renderTagHints();
             document.getElementById('addModal').classList.remove('hidden');
             refreshClearBtns();
@@ -876,6 +920,7 @@
             const preview = document.getElementById('previewContainer');
             const imgPreview = document.getElementById('imagePreview');
             const imgUrl = document.getElementById('addImageUrl');
+            const searchLinkBtn = document.getElementById('searchLinkBtn');
             
             if (memo.image) {
                 if(imgPreview) imgPreview.src = getProxyImageUrl(memo.image);
@@ -885,9 +930,12 @@
             } else { 
                 if(preview) preview.classList.add('hidden'); 
             }
+            
+            // 編集時はキーワードが分からないので検索ボタンは一旦隠す
+            if(searchLinkBtn) searchLinkBtn.classList.add('hidden');
+
             const delBtn = document.getElementById('deleteMemoBtn');
             if(delBtn) delBtn.classList.remove('hidden'); 
-            document.getElementById('searchLinkBtn').classList.add('hidden'); // 編集中は検索ボタン隠す
             renderTagHints(); 
             document.getElementById('addModal').classList.remove('hidden');
             refreshClearBtns();
