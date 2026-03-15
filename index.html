@@ -20,7 +20,7 @@
     <script async defer src="https://apis.google.com/js/api.js"></script>
     <script async defer src="https://accounts.google.com/gsi/client"></script>
 
-    <!-- config.js -->
+    <!-- config.js (Drive同期用) -->
     <script src="config.js" onerror="console.warn('config.js が見つかりません。')"></script>
 
     <style>
@@ -66,14 +66,20 @@
                     </div>
                     <div>
                         <h1 class="text-lg font-black text-slate-800 tracking-tight leading-none mb-1">Travel Scrapper</h1>
-                        <p class="text-[10px] text-blue-600 font-bold uppercase tracking-[0.2em]">Web Viewer v1.6.7</p>
+                        <p class="text-[10px] text-blue-600 font-bold uppercase tracking-[0.2em]">Web Viewer v1.6.8</p>
                     </div>
                 </div>
 
-                <button id="driveSyncBtn" class="flex items-center gap-2 px-6 py-2.5 bg-green-600 text-white rounded-xl font-bold text-sm shadow-lg shadow-green-100 active:scale-95 transition-all">
-                    <i data-lucide="refresh-cw" size="18"></i>
-                    <span id="driveSyncText">Drive同期</span>
-                </button>
+                <div class="flex items-center gap-2">
+                    <!-- ★ 設定ボタン -->
+                    <button id="openSettingsBtn" class="p-2 text-slate-400 hover:text-slate-600 transition-colors" title="設定">
+                        <i data-lucide="settings" size="20"></i>
+                    </button>
+                    <button id="driveSyncBtn" class="flex items-center gap-2 px-6 py-2.5 bg-green-600 text-white rounded-xl font-bold text-sm shadow-lg shadow-green-100 active:scale-95 transition-all">
+                        <i data-lucide="refresh-cw" size="18"></i>
+                        <span id="driveSyncText">Drive同期</span>
+                    </button>
+                </div>
             </div>
 
             <div class="flex flex-wrap items-center gap-2">
@@ -133,7 +139,7 @@
         <i data-lucide="plus" size="28"></i>
     </button>
 
-    <!-- モーダル -->
+    <!-- メモ追加/編集モーダル -->
     <div id="addModal" class="fixed inset-0 z-[60] hidden flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
         <div class="bg-white w-full max-w-md rounded-[2.5rem] p-6 shadow-2xl modal-enter max-h-[90vh] overflow-y-auto no-scrollbar">
             <div class="flex justify-between items-center mb-6">
@@ -144,7 +150,7 @@
                 <div>
                     <label class="block text-xs font-black text-slate-500 mb-1.5 ml-1 uppercase tracking-widest">タイトル *</label>
                     <div class="relative">
-                        <input type="text" id="addTitle" class="w-full pl-4 pr-10 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none" placeholder="例：東京駅">
+                        <input type="text" id="addTitle" class="w-full pl-4 pr-10 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none" placeholder="例：美味しいピザ屋">
                         <button type="button" id="clear_addTitle" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300 hidden"><i data-lucide="x-circle" size="20"></i></button>
                     </div>
                 </div>
@@ -219,12 +225,36 @@
         </div>
     </div>
 
+    <!-- ★ 設定モーダル (APIキー入力用) -->
+    <div id="settingsModal" class="fixed inset-0 z-[70] hidden flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+        <div class="bg-white w-full max-w-sm rounded-[2rem] p-6 shadow-2xl modal-enter">
+            <h2 class="text-lg font-black text-slate-800 mb-4 flex items-center gap-2">
+                <i data-lucide="settings" size="20"></i> アプリ設定
+            </h2>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-black text-slate-500 mb-1.5 uppercase tracking-widest">Gemini API Key</label>
+                    <input type="password" id="geminiApiKeyInput" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 text-sm" placeholder="AI Studioのキーを入力">
+                    <p class="text-[10px] text-slate-400 mt-2 leading-relaxed">
+                        ※AI推察機能を使用する場合に必要です。<br>入力したキーはご利用のブラウザにのみ安全に保存されます。
+                    </p>
+                </div>
+                <button id="saveSettingsBtn" class="w-full py-3 bg-slate-800 text-white rounded-xl font-bold hover:bg-slate-900 transition-colors">設定を保存</button>
+                <button id="closeSettingsBtn" class="w-full py-3 text-slate-400 font-bold text-sm">閉じる</button>
+            </div>
+        </div>
+    </div>
+
     <!-- ライトボックス -->
     <div id="lightbox" class="fixed inset-0 z-[100] hidden bg-black/95 flex items-center justify-center p-4 cursor-zoom-out" onclick="this.classList.add('hidden')">
         <img id="lightboxImg" src="" class="max-w-full max-h-full rounded shadow-2xl transition-transform duration-300" />
     </div>
 
     <script>
+        // --- ★ 開発用ハードコード APIキー ---
+        // ここにキーを書き込んでおくこともできます。空の場合は設定画面の入力を参照します。
+        const HARDCODED_GEMINI_KEY = "";
+
         // --- State Management ---
         let allMemos = [];
         let currentTag = 'all';
@@ -232,9 +262,9 @@
         let currentDriveFileId = null; 
         let uploadedImageDataUrl = ''; 
         let editingMemoId = null;
+        let userSetGeminiKey = ""; // 設定画面から入力したAPIキー
 
         // --- Config & API ---
-        const apiKey = ""; // Canvas Provides Key automatically
         const CONFIG_READY = (typeof CONFIG !== 'undefined' && CONFIG.CLIENT_ID && !CONFIG.CLIENT_ID.includes('YOUR_'));
         const CLIENT_ID = CONFIG_READY ? CONFIG.CLIENT_ID : '';
         const DRIVE_API_KEY = CONFIG_READY ? CONFIG.API_KEY : '';
@@ -246,7 +276,14 @@
         // --- AI Implementation ---
 
         async function callGeminiAI(userQuery, systemInstruction) {
-            const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+            // ハードコードされたキー、もしくは設定画面から入力されたキーを使用する
+            const apiKeyToUse = HARDCODED_GEMINI_KEY || userSetGeminiKey;
+            
+            if (!apiKeyToUse) {
+                throw new Error("APIキーが設定されていません。右上の「設定アイコン(歯車)」からGemini APIキーを入力してください。");
+            }
+
+            const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKeyToUse}`;
             const payload = {
                 contents: [{ parts: [{ text: userQuery }] }],
                 systemInstruction: { parts: [{ text: systemInstruction }] }
@@ -259,7 +296,10 @@
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(payload)
                     });
+                    
+                    if (response.status === 403) throw new Error("APIキーが無効、またはアクセス権限がありません。");
                     if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                    
                     const result = await response.json();
                     return result.candidates?.[0]?.content?.parts?.[0]?.text;
                 } catch (err) {
@@ -299,7 +339,7 @@
                     alert("場所を特定できませんでした。もう少し情報を入力してください。");
                 }
             } catch (err) {
-                alert("AIとの通信に失敗しました。時間を置いて再度お試しください。");
+                alert(err.message || "AIとの通信に失敗しました。時間を置いて再度お試しください。");
             } finally {
                 btn.classList.remove('btn-loading');
                 btn.innerHTML = originalInner;
@@ -331,6 +371,17 @@
             document.getElementById('driveSyncBtn').onclick = handleSyncClick;
             document.getElementById('drivePickerBtn').onclick = handlePickerClick;
             document.getElementById('generateMapBtn').onclick = handleAiMapGeneration;
+
+            // ★ 設定モーダルのイベント
+            document.getElementById('openSettingsBtn').onclick = () => document.getElementById('settingsModal').classList.remove('hidden');
+            document.getElementById('closeSettingsBtn').onclick = () => document.getElementById('settingsModal').classList.add('hidden');
+            document.getElementById('saveSettingsBtn').onclick = async () => {
+                userSetGeminiKey = document.getElementById('geminiApiKeyInput').value.trim();
+                await idbKeyval.set('user_gemini_key', userSetGeminiKey);
+                document.getElementById('settingsModal').classList.add('hidden');
+                alert("設定を保存しました。");
+            };
+
             setupInputClears();
             setupImageLogic();
         }
@@ -339,6 +390,11 @@
             const cachedMemos = await idbKeyval.get('travelMemos_cache');
             if (cachedMemos) allMemos = cachedMemos;
             currentDriveFileId = await idbKeyval.get('driveFileId_cache');
+            
+            // 保存されたAPIキーの読み込み
+            userSetGeminiKey = (await idbKeyval.get('user_gemini_key')) || "";
+            document.getElementById('geminiApiKeyInput').value = userSetGeminiKey;
+
             accessToken = await idbKeyval.get('gapi_access_token');
             const expiry = await idbKeyval.get('gapi_token_expiry');
             if (expiry && Date.now() > parseInt(expiry)) {
@@ -765,4 +821,5 @@
     </script>
 </body>
 </html>
+
 
