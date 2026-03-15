@@ -5,18 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Travel Scrapper</title>
     
-    <!-- ファビコン (飛行機SVG) -->
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2003/svg' viewBox='0 0 24 24' fill='none' stroke='%232563eb' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M17.8 19.2L16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z'/></svg>">
 
-    <!-- Tailwind CSS -->
+    <!-- ライブラリ群 -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
-    
-    <!-- IndexedDB Library -->
     <script src="https://cdn.jsdelivr.net/npm/idb-keyval@6/dist/umd.js"></script>
-    
-    <!-- Google API Loader -->
     <script async defer src="https://apis.google.com/js/api.js"></script>
     <script async defer src="https://accounts.google.com/gsi/client"></script>
 
@@ -28,6 +22,7 @@
         body { 
             font-family: 'Noto Sans JP', sans-serif; 
             background-color: #f1f5f9;
+            -webkit-tap-highlight-color: transparent;
         }
         .memo-grid {
             column-count: 1;
@@ -47,14 +42,24 @@
             to { opacity: 1; transform: scale(1); }
         }
         .modal-enter { animation: fadeIn 0.2s ease-out forwards; }
-        
-        .btn-loading {
-            pointer-events: none;
-            opacity: 0.6;
-        }
+        .btn-loading { pointer-events: none; opacity: 0.7; }
     </style>
 </head>
 <body class="text-slate-900 pb-20">
+
+    <!-- トースト通知エリア -->
+    <div id="toastContainer" class="fixed bottom-20 left-1/2 transform -translate-x-1/2 z-[9999] flex flex-col gap-2 pointer-events-none"></div>
+
+    <!-- カスタム確認ダイアログ -->
+    <div id="confirmModal" class="fixed inset-0 z-[200] hidden flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
+        <div class="bg-white rounded-[2rem] p-6 max-w-xs w-full shadow-2xl modal-enter">
+            <p id="confirmMsg" class="text-slate-800 font-black mb-6 text-center text-sm leading-relaxed"></p>
+            <div class="flex gap-3">
+                <button id="confirmCancelBtn" class="flex-1 py-3 bg-slate-100 text-slate-500 rounded-xl font-bold text-xs hover:bg-slate-200 transition-colors">キャンセル</button>
+                <button id="confirmOkBtn" class="flex-1 py-3 bg-red-500 text-white rounded-xl font-bold text-xs hover:bg-red-600 shadow-lg shadow-red-200 transition-colors">OK</button>
+            </div>
+        </div>
+    </div>
 
     <!-- ナビゲーションバー -->
     <nav class="bg-white/90 backdrop-blur-md border-b border-slate-200 sticky top-0 z-40 shadow-sm">
@@ -66,14 +71,19 @@
                     </div>
                     <div>
                         <h1 class="text-lg font-black text-slate-800 tracking-tight leading-none mb-1">Travel Scrapper</h1>
-                        <p class="text-[10px] text-blue-600 font-bold uppercase tracking-[0.2em]">Web Viewer v1.6.7</p>
+                        <p class="text-[10px] text-blue-600 font-bold uppercase tracking-[0.2em]">Web Viewer v1.6.8 (Fix)</p>
                     </div>
                 </div>
 
-                <button id="driveSyncBtn" class="flex items-center gap-2 px-6 py-2.5 bg-green-600 text-white rounded-xl font-bold text-sm shadow-lg shadow-green-100 active:scale-95 transition-all">
-                    <i data-lucide="refresh-cw" size="18"></i>
-                    <span id="driveSyncText">Drive同期</span>
-                </button>
+                <div class="flex items-center gap-1.5">
+                    <button id="openSettingsBtn" class="p-2 text-slate-400 hover:text-blue-600 transition-colors bg-slate-50 rounded-xl" title="API設定">
+                        <i data-lucide="settings" size="20"></i>
+                    </button>
+                    <button id="driveSyncBtn" class="flex items-center gap-2 px-5 py-2.5 bg-green-600 text-white rounded-xl font-bold text-sm shadow-lg shadow-green-100 active:scale-95 transition-all">
+                        <i data-lucide="refresh-cw" size="18"></i>
+                        <span id="driveSyncText">Drive同期</span>
+                    </button>
+                </div>
             </div>
 
             <div class="flex flex-wrap items-center gap-2">
@@ -93,7 +103,7 @@
                 <div class="flex-1"></div>
 
                 <div class="flex items-center gap-1">
-                    <button id="logoutBtn" class="hidden items-center gap-1.5 px-3 py-2 text-red-600 font-bold text-xs hover:bg-red-50 rounded-lg transition-colors">
+                    <button id="logoutBtn" class="hidden flex items-center gap-1.5 px-3 py-2 text-red-600 font-bold text-xs hover:bg-red-50 rounded-lg transition-colors">
                         <i data-lucide="log-out" size="16"></i>
                         <span>ログアウト</span>
                     </button>
@@ -133,7 +143,7 @@
         <i data-lucide="plus" size="28"></i>
     </button>
 
-    <!-- モーダル -->
+    <!-- 追加・編集モーダル -->
     <div id="addModal" class="fixed inset-0 z-[60] hidden flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
         <div class="bg-white w-full max-w-md rounded-[2.5rem] p-6 shadow-2xl modal-enter max-h-[90vh] overflow-y-auto no-scrollbar">
             <div class="flex justify-between items-center mb-6">
@@ -144,7 +154,7 @@
                 <div>
                     <label class="block text-xs font-black text-slate-500 mb-1.5 ml-1 uppercase tracking-widest">タイトル *</label>
                     <div class="relative">
-                        <input type="text" id="addTitle" class="w-full pl-4 pr-10 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none" placeholder="例：東京駅">
+                        <input type="text" id="addTitle" class="w-full pl-4 pr-10 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none" placeholder="例：美味しいピザ屋">
                         <button type="button" id="clear_addTitle" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300 hidden"><i data-lucide="x-circle" size="20"></i></button>
                     </div>
                 </div>
@@ -219,6 +229,26 @@
         </div>
     </div>
 
+    <!-- AI設定モーダル -->
+    <div id="settingsModal" class="fixed inset-0 z-[70] hidden flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+        <div class="bg-white w-full max-w-sm rounded-[2rem] p-6 shadow-2xl modal-enter">
+            <h2 class="text-lg font-black text-slate-800 mb-4 flex items-center gap-2">
+                <i data-lucide="settings" size="20"></i> AI設定
+            </h2>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-black text-slate-500 mb-1.5 uppercase tracking-widest">Gemini API Key</label>
+                    <input type="password" id="geminiApiKeyInput" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 text-sm" placeholder="AI Studioのキーを入力">
+                    <p class="text-[10px] text-slate-400 mt-2 leading-relaxed">
+                        ※AI推察機能を使う場合に必要です。<br>入力したキーはご利用のブラウザにのみ安全に保存されます。
+                    </p>
+                </div>
+                <button id="saveSettingsBtn" class="w-full py-3 bg-slate-800 text-white rounded-xl font-bold hover:bg-slate-900 transition-colors">設定を保存</button>
+                <button id="closeSettingsBtn" class="w-full py-3 text-slate-400 font-bold text-sm">閉じる</button>
+            </div>
+        </div>
+    </div>
+
     <!-- ライトボックス -->
     <div id="lightbox" class="fixed inset-0 z-[100] hidden bg-black/95 flex items-center justify-center p-4 cursor-zoom-out" onclick="this.classList.add('hidden')">
         <img id="lightboxImg" src="" class="max-w-full max-h-full rounded shadow-2xl transition-transform duration-300" />
@@ -235,6 +265,8 @@
 
         // --- Config & API ---
         const apiKey = ""; // Canvas Provides Key automatically
+        let userSetGeminiKey = ""; // 設定から入力されたAPIキー
+
         const CONFIG_READY = (typeof CONFIG !== 'undefined' && CONFIG.CLIENT_ID && !CONFIG.CLIENT_ID.includes('YOUR_'));
         const CLIENT_ID = CONFIG_READY ? CONFIG.CLIENT_ID : '';
         const DRIVE_API_KEY = CONFIG_READY ? CONFIG.API_KEY : '';
@@ -243,30 +275,84 @@
 
         let tokenClient, accessToken = null, gapiInited = false, gisInited = false, actionAfterAuth = null;
 
-        // --- AI Implementation ---
+        // --- Utils: Custom Toast & Confirm ---
+        function showMsg(message, isError = false) {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `px-6 py-3 rounded-full text-sm font-bold shadow-xl transition-all duration-300 z-[9999] opacity-0 translate-y-4 ${isError ? 'bg-red-600 text-white' : 'bg-slate-800 text-white'}`;
+            toast.textContent = message;
+            container.appendChild(toast);
+            
+            requestAnimationFrame(() => toast.classList.remove('opacity-0', 'translate-y-4'));
+            
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-4');
+                setTimeout(() => toast.remove(), 300);
+            }, 3500);
+        }
 
-        async function callGeminiAI(userQuery, systemInstruction) {
-            const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
-            const payload = {
-                contents: [{ parts: [{ text: userQuery }] }],
-                systemInstruction: { parts: [{ text: systemInstruction }] }
+        function showConfirm(msg, callback) {
+            const modal = document.getElementById('confirmModal');
+            document.getElementById('confirmMsg').textContent = msg;
+            modal.classList.remove('hidden');
+            
+            document.getElementById('confirmCancelBtn').onclick = () => modal.classList.add('hidden');
+            document.getElementById('confirmOkBtn').onclick = () => {
+                modal.classList.add('hidden');
+                callback();
             };
+        }
 
-            for (let i = 0; i < 6; i++) {
-                try {
-                    const response = await fetch(endpoint, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
-                    });
-                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-                    const result = await response.json();
-                    return result.candidates?.[0]?.content?.parts?.[0]?.text;
-                } catch (err) {
-                    if (i === 5) throw err;
-                    await new Promise(r => setTimeout(r, Math.pow(2, i) * 1000));
+        // --- AI Implementation (404対策付き) ---
+        async function callGeminiAI(userQuery, systemInstruction) {
+            const keyToUse = userSetGeminiKey || apiKey || "";
+            if (!keyToUse) {
+                throw new Error("APIキーが未設定です。右上の設定(歯車)から入力してください。");
+            }
+
+            // 404エラーを回避するため、複数のモデルを順番に試す
+            const modelsToTry = [
+                "gemini-2.5-flash", 
+                "gemini-1.5-flash",
+                "gemini-2.5-flash-preview-09-2025"
+            ];
+
+            let lastErr = null;
+
+            for (const model of modelsToTry) {
+                const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${keyToUse}`;
+                const payload = {
+                    contents: [{ parts: [{ text: userQuery }] }],
+                    systemInstruction: { parts: [{ text: systemInstruction }] }
+                };
+
+                for (let i = 0; i < 3; i++) {
+                    try {
+                        const response = await fetch(endpoint, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload)
+                        });
+                        
+                        if (response.status === 404) {
+                            lastErr = new Error(`モデルが見つかりません(404)`);
+                            break; // このモデルは諦めて次を試す
+                        }
+                        if (response.status === 400 || response.status === 403) {
+                            const errTxt = await response.text();
+                            throw new Error(`API権限エラー(${response.status})`);
+                        }
+                        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                        
+                        const result = await response.json();
+                        return result.candidates?.[0]?.content?.parts?.[0]?.text;
+                    } catch (err) {
+                        lastErr = err;
+                        await new Promise(r => setTimeout(r, Math.pow(2, i) * 1000));
+                    }
                 }
             }
+            throw lastErr || new Error("AI通信に失敗しました");
         }
 
         async function handleAiMapGeneration() {
@@ -276,7 +362,7 @@
             const mapInput = document.getElementById('addMapUrl');
 
             if (!title && !memoText) {
-                alert("タイトルかメモを先に入力してください。");
+                showMsg("タイトルかメモを先に入力してください。", true);
                 return;
             }
 
@@ -285,7 +371,7 @@
             btn.innerHTML = `<i data-lucide="loader-2" class="animate-spin" size="12"></i> 推察中...`;
             if (window.lucide) lucide.createIcons();
 
-            const sys = "あなたは旅行アシスタントです。入力内容からGoogleマップ検索に最適な場所の名称（店名、観光地名、駅名など）を1つ特定してください。出力は検索キーワードのみとし、挨拶や説明は一切含めないでください。";
+            const sys = "旅行メモの内容からGoogleマップ検索に最適な場所の名称（店名、観光地名、駅名など）を1つ特定してください。出力は検索キーワードのみ。";
             const user = `タイトル: ${title}\nメモ: ${memoText}`;
 
             try {
@@ -295,11 +381,13 @@
                     mapInput.value = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(keyword)}`;
                     const clearBtn = document.getElementById('clear_addMapUrl');
                     if(clearBtn) clearBtn.classList.remove('hidden');
+                    showMsg("場所を推測しました");
                 } else {
-                    alert("場所を特定できませんでした。もう少し情報を入力してください。");
+                    showMsg("場所を特定できませんでした。", true);
                 }
             } catch (err) {
-                alert("AIとの通信に失敗しました。時間を置いて再度お試しください。");
+                console.error(err);
+                showMsg(err.message, true);
             } finally {
                 btn.classList.remove('btn-loading');
                 btn.innerHTML = originalInner;
@@ -325,12 +413,31 @@
             
             document.getElementById('closeAddModalBtn').onclick = () => document.getElementById('addModal').classList.add('hidden');
             document.getElementById('saveNewMemoBtn').onclick = saveMemo;
-            document.getElementById('deleteMemoBtn').onclick = deleteMemo;
-            document.getElementById('clearDataBtn').onclick = clearAllLocalData;
-            document.getElementById('logoutBtn').onclick = logout;
+            
+            document.getElementById('deleteMemoBtn').onclick = () => {
+                showConfirm("このメモを削除してよろしいですか？", deleteMemo);
+            };
+            document.getElementById('clearDataBtn').onclick = () => {
+                showConfirm("保存されたキャッシュを初期化しますか？(Driveのデータは消えません)", clearAllLocalData);
+            };
+            document.getElementById('logoutBtn').onclick = () => {
+                showConfirm("ログアウトしますか？", logout);
+            };
+
             document.getElementById('driveSyncBtn').onclick = handleSyncClick;
             document.getElementById('drivePickerBtn').onclick = handlePickerClick;
             document.getElementById('generateMapBtn').onclick = handleAiMapGeneration;
+
+            // 設定モーダル
+            document.getElementById('openSettingsBtn').onclick = () => document.getElementById('settingsModal').classList.remove('hidden');
+            document.getElementById('closeSettingsBtn').onclick = () => document.getElementById('settingsModal').classList.add('hidden');
+            document.getElementById('saveSettingsBtn').onclick = async () => {
+                userSetGeminiKey = document.getElementById('geminiApiKeyInput').value.trim();
+                await idbKeyval.set('user_gemini_key', userSetGeminiKey);
+                document.getElementById('settingsModal').classList.add('hidden');
+                showMsg("設定を保存しました");
+            };
+
             setupInputClears();
             setupImageLogic();
         }
@@ -339,6 +446,10 @@
             const cachedMemos = await idbKeyval.get('travelMemos_cache');
             if (cachedMemos) allMemos = cachedMemos;
             currentDriveFileId = await idbKeyval.get('driveFileId_cache');
+            
+            userSetGeminiKey = (await idbKeyval.get('user_gemini_key')) || "";
+            document.getElementById('geminiApiKeyInput').value = userSetGeminiKey;
+
             accessToken = await idbKeyval.get('gapi_access_token');
             const expiry = await idbKeyval.get('gapi_token_expiry');
             if (expiry && Date.now() > parseInt(expiry)) {
@@ -386,7 +497,6 @@
         }
 
         async function logout() {
-            if (!confirm("ログアウトしますか？")) return;
             accessToken = null;
             await idbKeyval.del('gapi_access_token');
             await idbKeyval.del('gapi_token_expiry');
@@ -442,11 +552,12 @@
                     allMemos = data;
                     await idbKeyval.set('travelMemos_cache', allMemos);
                     render();
+                    showMsg("Driveから同期しました");
                 }
             } catch (e) {
                 if (e.status === 401 || e.status === 403) {
                     accessToken = null; updateDriveUI();
-                    alert("再認証が必要です。Drive同期ボタンをもう一度押して、チェックボックスにチェックを入れたことを確認してください。");
+                    showMsg("再ログインが必要です。チェックボックスを忘れずに。", true);
                 }
             } finally {
                 if (btnText) btnText.textContent = currentDriveFileId ? "Drive同期" : "Driveを開く";
@@ -468,7 +579,10 @@
                 return true;
             } catch (err) {
                 if (err.code === 403 || err.status === 403) {
-                    alert("【重要】保存権限がありません！\n\nGoogleログイン時に「Googleドライブのすべてのファイルの表示、編集、作成、削除」のチェックボックスにチェックを入れ忘れている可能性があります。一度ログアウトし、再同期時にチェックを入れてください。");
+                    showMsg("保存権限エラー：再ログインし「すべてのファイルの表示...」にチェックを入れてください。", true);
+                    accessToken = null; updateDriveUI();
+                } else {
+                    showMsg("同期エラーが発生しました", true);
                 }
                 return false;
             }
@@ -533,6 +647,7 @@
                 await idbKeyval.set('travelMemos_cache', allMemos);
                 document.getElementById('addModal').classList.add('hidden');
                 render();
+                showMsg("保存しました");
             } else {
                 allMemos = oldMemos;
             }
@@ -540,7 +655,6 @@
         }
 
         async function deleteMemo() {
-            if (!confirm("このメモを削除しますか？")) return;
             const old = [...allMemos];
             allMemos = allMemos.filter(m => m.id !== editingMemoId);
             let success = true;
@@ -549,6 +663,7 @@
                 await idbKeyval.set('travelMemos_cache', allMemos);
                 document.getElementById('addModal').classList.add('hidden');
                 render();
+                showMsg("削除しました");
             } else { allMemos = old; }
         }
 
@@ -564,7 +679,7 @@
                 container.innerHTML = `
                     <div class="col-span-full py-32 flex flex-col items-center text-center px-10 text-slate-400">
                         <i data-lucide="plane" size="48" class="mb-4 opacity-20"></i>
-                        <p class="font-medium">データがありません。Drive同期をするか、右下の＋ボタンで追加してください。</p>
+                        <p class="font-medium">データがありません。<br>同期するか右下の＋ボタンで追加してください。</p>
                     </div>`;
                 if (window.lucide) lucide.createIcons();
                 return;
@@ -742,14 +857,14 @@
                         await idbKeyval.set('travelMemos_cache', allMemos);
                         await idbKeyval.del('driveFileId_cache');
                         updateDriveUI(); render();
+                        showMsg("ローカルから読み込みました");
                     }
-                } catch (err) { alert("JSON読み込み失敗"); }
+                } catch (err) { showMsg("JSON読み込み失敗", true); }
             };
             reader.readAsText(file);
         }
 
         async function clearAllLocalData() {
-            if(!confirm("保存された全キャッシュを初期化しますか？")) return;
             await idbKeyval.clear(); location.reload();
         }
 
@@ -765,4 +880,5 @@
     </script>
 </body>
 </html>
+
 
