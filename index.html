@@ -55,14 +55,19 @@
                     <i data-lucide="globe" size="24"></i>
                 </div>
                 <div>
-                    <!-- ★ バージョン番号を v1.4.9 に更新 -->
+                    <!-- ★ バージョン番号を v1.5.0 に更新 -->
                     <h1 class="text-lg font-black text-slate-800 tracking-tight flex items-center gap-2">
-                        Travel Scrapper <span class="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200">v1.4.9</span>
+                        Travel Scrapper <span class="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200">v1.5.0</span>
                     </h1>
                     <p class="text-[10px] text-blue-600 font-bold uppercase tracking-widest">Web Viewer</p>
                 </div>
             </div>
             <div class="flex gap-2">
+                <!-- ★ データクリア（初期化）ボタンを追加 -->
+                <button id="clearDataBtn" class="flex items-center gap-2 px-3 py-2 bg-slate-100 text-slate-600 rounded-xl hover:bg-slate-200 font-bold text-sm transition-colors border border-slate-200" title="ローカルデータをクリア（初期化）">
+                    <i data-lucide="trash" size="18"></i>
+                </button>
+
                 <!-- ログアウトボタン -->
                 <button id="logoutBtn" class="hidden flex items-center gap-2 px-3 py-2 bg-red-50 text-red-600 rounded-xl hover:bg-red-100 font-bold text-sm transition-colors border border-red-100" title="ログアウトして認証情報をクリア">
                     <i data-lucide="log-out" size="18"></i>
@@ -211,9 +216,22 @@
         let gisInited = false;
         let actionAfterAuth = null;
 
+        // ★ データの完全クリア機能を追加
+        async function clearAllData() {
+            if(!confirm("【警告】ローカルのキャッシュ（一時データ）をすべて消去して、アプリを初期状態に戻しますか？\n※Googleドライブ上のファイルは消えません。")) return;
+            allMemos = [];
+            currentDriveFileId = null;
+            await idbKeyval.del('travelMemos_cache');
+            await idbKeyval.del('driveFileId_cache');
+            render();
+            updateDriveButtonState();
+            alert("データを初期化しました。右側のフォルダアイコンから、改めてGoogleドライブのファイルを選択してください。");
+        }
+        document.getElementById('clearDataBtn').onclick = clearAllData;
+
         // ログアウト処理
         async function logout() {
-            if(!confirm("ログアウトしますか？")) return;
+            if(!confirm("ログアウトして認証情報をクリアしますか？")) return;
             await idbKeyval.del('gapi_access_token');
             await idbKeyval.del('gapi_token_expiry');
             accessToken = null;
@@ -258,11 +276,16 @@
             const syncText = document.getElementById('driveSyncText');
             const logoutBtn = document.getElementById('logoutBtn');
 
-            if (currentDriveFileId) { syncText.textContent = "Drive同期"; }
-            else { syncText.textContent = "Driveを開く"; }
+            // クラッシュ防止: 要素が存在する場合のみ更新する
+            if (syncText) {
+                if (currentDriveFileId) { syncText.textContent = "Drive同期"; }
+                else { syncText.textContent = "Driveを開く"; }
+            }
 
-            if (accessToken) { logoutBtn.classList.remove('hidden'); }
-            else { logoutBtn.classList.add('hidden'); }
+            if (logoutBtn) {
+                if (accessToken) { logoutBtn.classList.remove('hidden'); }
+                else { logoutBtn.classList.add('hidden'); }
+            }
         }
 
         async function tryInitGoogleApi() {
@@ -292,9 +315,12 @@
             if (gapiInited && gisInited) document.getElementById('driveBtnGroup').classList.remove('opacity-50');
         }
 
+        // ★ クラッシュの原因だった関数を修正 (id="driveSyncText" を維持するように変更)
         function resetSyncButton() {
             const btn = document.getElementById('driveSyncBtn');
-            btn.innerHTML = `<i data-lucide="refresh-cw" size="18"></i><span class="hidden sm:inline">Drive同期</span>`;
+            if (btn) {
+                btn.innerHTML = `<i data-lucide="refresh-cw" size="18"></i><span id="driveSyncText" class="hidden sm:inline">Drive同期</span>`;
+            }
             if (typeof lucide !== 'undefined') lucide.createIcons();
         }
 
@@ -330,10 +356,12 @@
             picker.setVisible(true);
         }
 
-        // ★ エラーの詳細を表示し、自動修復を促すように強化
         async function fetchDriveData(fileId) {
             const btn = document.getElementById('driveSyncBtn');
-            btn.innerHTML = `<i data-lucide="refresh-cw" class="animate-spin" size="18"></i><span class="hidden sm:inline">同期中...</span>`;
+            if (btn) {
+                // ★ ID維持
+                btn.innerHTML = `<i data-lucide="refresh-cw" class="animate-spin" size="18"></i><span id="driveSyncText" class="hidden sm:inline">同期中...</span>`;
+            }
             if (typeof lucide !== 'undefined') lucide.createIcons();
             
             try {
@@ -342,7 +370,6 @@
                 const resp = await gapi.client.drive.files.get({ fileId: fileId, alt: 'media' });
                 let data = resp.result;
                 
-                // データが文字列の場合はパースを試みる（安全な処理）
                 if (typeof data === 'string') {
                     try { 
                         data = JSON.parse(data); 
@@ -362,17 +389,15 @@
             } catch (e) {
                 console.error("Fetch Error Detail:", e);
                 
-                // エラーコードとメッセージを抽出
                 const status = e.status || (e.result && e.result.error && e.result.error.code) || e.code;
                 const msg = e.message || (e.result && e.result.error && e.result.error.message) || String(e);
 
                 if (status === 401 || status === 403) {
                     await idbKeyval.del('gapi_access_token');
                     accessToken = null;
-                    alert(`認証エラー(${status})が発生しました。\n安全のためログアウトしました。再度ログインしてください。`);
+                    alert(`認証エラー(${status})。\n安全のためログアウトしました。再度ログインしてください。`);
                 } else if (status === 404) {
                     alert("【重要】ファイルが見つかりません！\n\n別のアカウントでログインしたか、ファイルが削除された可能性があります。\n右側の「フォルダアイコン」を押して、再度ファイルを選択し直してください。");
-                    // エラーの元になったIDをクリアして、次回はファイル選択を開かせる
                     currentDriveFileId = null;
                     await saveCache();
                 } else if (msg === "JSON_PARSE_ERROR" || msg === "INVALID_FORMAT") {
