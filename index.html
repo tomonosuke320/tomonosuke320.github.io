@@ -9,7 +9,7 @@
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
     
-    <!-- 大容量データベース（IndexedDB）を簡単に扱うためのライブラリを追加 -->
+    <!-- 大容量データベース（IndexedDB）を簡単に扱うためのライブラリ -->
     <script src="https://cdn.jsdelivr.net/npm/idb-keyval@6/dist/umd.js"></script>
     
     <!-- Google API Loader -->
@@ -55,9 +55,9 @@
                     <i data-lucide="globe" size="24"></i>
                 </div>
                 <div>
-                    <!-- ★ バージョン番号を v1.4.1 に更新 -->
+                    <!-- ★ バージョン番号を v1.4.2 に更新 -->
                     <h1 class="text-lg font-black text-slate-800 tracking-tight flex items-center gap-2">
-                        Travel Scrapper <span class="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200">v1.4.1</span>
+                        Travel Scrapper <span class="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200">v1.4.2</span>
                     </h1>
                     <p class="text-[10px] text-blue-600 font-bold uppercase tracking-widest">Web Viewer</p>
                 </div>
@@ -353,7 +353,6 @@
             }
         }
 
-        // --- Fetch API による通信 ---
         function createPicker() {
             const picker = new google.picker.PickerBuilder()
                 .addView(new google.picker.DocsView(google.picker.ViewId.DOCS).setMimeTypes('application/json'))
@@ -370,6 +369,7 @@
             picker.setVisible(true);
         }
 
+        // --- ★ CORSエラーを回避するため、再び gapi.client を使用する通信方式に変更 ---
         async function fetchDriveData(fileId) {
             const btn = document.getElementById('driveSyncBtn');
             const originalHtml = btn.innerHTML;
@@ -377,18 +377,15 @@
             if (typeof lucide !== 'undefined') lucide.createIcons();
 
             try {
-                const response = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, {
-                    headers: { 'Authorization': `Bearer ${accessToken}` }
-                });
+                if (gapi.client) gapi.client.setToken({ access_token: accessToken });
 
-                if (!response.ok) {
-                    if(response.status === 401) {
-                        throw new Error("認証の有効期限が切れました。ページを更新して再接続してください。");
-                    }
-                    throw new Error(`アクセス権限がないか、ファイルが見つかりません (HTTP ${response.status})`);
+                const resp = await gapi.client.drive.files.get({ fileId: fileId, alt: 'media' });
+                
+                // データが文字列で返ってきた場合の安全なパース
+                let data = resp.result;
+                if (typeof data === 'string') {
+                    try { data = JSON.parse(data); } catch(e) {}
                 }
-
-                const data = await response.json();
 
                 if (Array.isArray(data)) {
                     allMemos = data;
@@ -400,42 +397,70 @@
                 }
             } catch (e) {
                 console.error("Fetch error:", e);
-                alert("同期に失敗しました。\n詳細: " + e.message);
-                accessToken = null;
-                await idbKeyval.del('gapi_access_token');
-                await idbKeyval.del('gapi_token_expiry');
+                let errorMsg = "同期に失敗しました。";
+                
+                // エラーコードの取得 (gapi仕様に準拠)
+                const errorCode = e.status || (e.result && e.result.error && e.result.error.code) || e.code;
+                
+                if (errorCode === 401) {
+                    errorMsg = "認証が切れました。再度「Drive同期」ボタンを押して再ログインしてください。";
+                    accessToken = null;
+                    await idbKeyval.del('gapi_access_token');
+                    await idbKeyval.del('gapi_token_expiry');
+                } else if (errorCode === 403) {
+                    errorMsg = "アクセス権限がありません (HTTP 403)。\n※フォルダアイコンから再度ファイルを選択し直してください。";
+                } else if (errorCode === 404) {
+                    errorMsg = "ファイルが見つかりません。Googleドライブ上で削除された可能性があります。";
+                    currentDriveFileId = null;
+                    await saveCache();
+                } else {
+                    errorMsg += "\n詳細: " + (e.message || "不明なエラー");
+                }
+                alert(errorMsg);
             } finally {
                 btn.innerHTML = originalHtml;
                 if (typeof lucide !== 'undefined') lucide.createIcons();
             }
         }
 
-        // ドライブのファイルを更新（URLを修正済）
         async function updateDriveFile() {
             if (!currentDriveFileId || !accessToken) return false;
             
             const content = JSON.stringify(allMemos, null, 2);
+            
             try {
-                // ★修正: upload.googleapis.com ではなく www.googleapis.com/upload/... を使用
-                const response = await fetch(`https://www.googleapis.com/upload/drive/v3/files/${currentDriveFileId}?uploadType=media`, {
+                if (gapi.client) gapi.client.setToken({ access_token: accessToken });
+
+                // gapi.client.request を使用することで、CORSエラーを自動で回避する
+                const request = gapi.client.request({
+                    path: '/upload/drive/v3/files/' + currentDriveFileId,
                     method: 'PATCH',
-                    headers: {
-                        'Authorization': `Bearer ${accessToken}`,
-                        'Content-Type': 'application/json'
-                    },
+                    params: { uploadType: 'media' },
                     body: content
                 });
-
-                if (!response.ok) {
-                    if (response.status === 401) {
-                        throw new Error("認証の有効期限が切れました。ページを更新して再接続してください。");
-                    }
-                    throw new Error(`HTTPエラー: ${response.status}`);
-                }
+                
+                await new Promise((resolve, reject) => {
+                    request.execute(function(resp) {
+                        if (resp && resp.error) reject(resp.error);
+                        else resolve(resp);
+                    });
+                });
                 return true;
             } catch (err) {
                 console.error("Upload error:", err);
-                alert("Googleドライブへの保存に失敗しました。\n詳細: " + err.message);
+                let errorMsg = "Googleドライブへの保存に失敗しました。";
+                
+                if (err.code === 401) {
+                    errorMsg = "認証が切れました。再度「Drive同期」ボタンを押してログインしてください。";
+                    accessToken = null;
+                    idbKeyval.del('gapi_access_token');
+                    idbKeyval.del('gapi_token_expiry');
+                } else if (err.code === 403) {
+                    errorMsg = "アクセス権限がありません (HTTP 403)。ファイルが別のアプリで作成されたか、所有者が異なる可能性があります。";
+                } else if (err.message) {
+                    errorMsg += "\n詳細: " + err.message;
+                }
+                alert(errorMsg);
                 return false;
             }
         }
