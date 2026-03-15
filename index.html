@@ -14,8 +14,7 @@
     <script async defer src="https://accounts.google.com/gsi/client"></script>
 
     <!-- 分離した設定ファイル(config.js)の読み込み -->
-    <!-- エラー時に検知できるよう、読み込み確認用のスクリプトを追加 -->
-    <script src="config.js" onerror="alert('config.js が見つかりません。同じフォルダにあるか確認してください。')"></script>
+    <script src="config.js" onerror="console.warn('config.js が見つかりません。ローカル動作モードで起動します。')"></script>
 
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&display=swap');
@@ -35,10 +34,17 @@
         }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        .modal-enter { animation: fadeIn 0.2s ease-out forwards; }
     </style>
 </head>
 <body class="text-slate-900 pb-20">
 
+    <!-- ナビゲーションバー -->
     <nav class="bg-white/80 backdrop-blur-md border-b border-slate-200 sticky top-0 z-40 px-4 py-3 shadow-sm">
         <div class="max-w-6xl mx-auto flex justify-between items-center">
             <div class="flex items-center gap-3">
@@ -51,11 +57,13 @@
                 </div>
             </div>
             <div class="flex gap-2">
-                <button id="driveBtn" class="flex items-center gap-2 px-4 py-2 bg-green-50 text-green-700 rounded-xl hover:bg-green-100 transition-all font-bold text-sm opacity-50 shadow-sm">
+                <!-- Googleドライブボタン -->
+                <button id="driveBtn" class="flex items-center gap-2 px-4 py-2 bg-green-50 text-green-700 rounded-xl hover:bg-green-100 transition-all font-bold text-sm opacity-50 shadow-sm" title="Googleドライブから開く">
                     <i data-lucide="database" size="18"></i>
                     <span class="hidden sm:inline">Driveから開く</span>
                 </button>
-                <label class="flex items-center gap-2 px-4 py-2 bg-slate-800 text-white rounded-xl hover:bg-slate-700 cursor-pointer shadow-md transition-transform active:scale-95 font-bold text-sm">
+                <!-- ローカルファイルボタン -->
+                <label class="flex items-center gap-2 px-4 py-2 bg-slate-800 text-white rounded-xl hover:bg-slate-700 cursor-pointer shadow-md transition-transform active:scale-95 font-bold text-sm" title="ローカルファイルを開く">
                     <i data-lucide="upload" size="18"></i>
                     <span class="hidden sm:inline">ファイル読込</span>
                     <input type="file" id="fileInput" accept=".json" class="hidden" />
@@ -64,11 +72,17 @@
         </div>
     </nav>
 
+    <!-- 検索とタグフィルター -->
     <div class="max-w-6xl mx-auto px-4 mt-6">
         <div class="bg-white p-4 md:p-6 rounded-3xl border border-slate-200 shadow-sm flex flex-col gap-4">
             <div class="relative">
                 <i data-lucide="search" class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size="20"></i>
-                <input type="text" id="searchInput" placeholder="場所や内容で検索..." class="w-full pl-12 pr-4 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all text-base" />
+                <input 
+                    type="text" 
+                    id="searchInput"
+                    placeholder="場所や内容で検索..."
+                    class="w-full pl-12 pr-4 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all text-base"
+                />
             </div>
             <div id="tagList" class="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
                 <i data-lucide="tag" class="text-slate-400 shrink-0" size="16"></i>
@@ -77,6 +91,7 @@
         </div>
     </div>
 
+    <!-- メモ表示エリア -->
     <main id="memoContainer" class="max-w-6xl mx-auto px-4 mt-8 memo-grid">
         <div class="col-span-full py-32 flex flex-col items-center text-center px-10">
             <div class="w-20 h-20 bg-blue-50 text-blue-300 rounded-3xl flex items-center justify-center mb-6">
@@ -84,40 +99,91 @@
             </div>
             <h2 class="text-xl font-bold text-slate-700">データが読み込まれていません</h2>
             <p class="text-slate-400 text-sm mt-2 max-w-xs">
-                config.js を設定し、Googleドライブから選択してください。
+                右下の「＋」ボタンからメモを追加するか、ファイルを読み込んでください。
             </p>
         </div>
     </main>
 
+    <!-- フローティングアクションボタン (メモ追加) -->
     <button id="fabAdd" class="fixed bottom-6 right-6 w-14 h-14 bg-blue-600 text-white rounded-full shadow-lg shadow-blue-300 flex items-center justify-center hover:bg-blue-700 transition-transform active:scale-90 z-50">
         <i data-lucide="plus" size="28"></i>
     </button>
 
-    <!-- モーダル省略(以前と同じ) -->
+    <!-- 追加・編集モーダル -->
     <div id="addModal" class="fixed inset-0 z-[60] hidden flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
         <div class="bg-white w-full max-w-md rounded-[2rem] p-6 shadow-2xl modal-enter max-h-[90vh] overflow-y-auto no-scrollbar">
-            <div class="flex justify-between items-center mb-6 text-slate-800">
-                <h2 class="text-xl font-black">新しいメモを追加</h2>
-                <button id="closeAddModalBtn" class="text-slate-400"><i data-lucide="x" size="24"></i></button>
+            <div class="flex justify-between items-center mb-6">
+                <h2 id="modalTitle" class="text-xl font-black text-slate-800">新しいメモを追加</h2>
+                <button id="closeAddModalBtn" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" size="24"></i></button>
             </div>
+            
             <div class="space-y-4">
-                <input type="text" id="addTitle" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none" placeholder="タイトル *">
-                <input type="url" id="addUrl" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none" placeholder="URL">
-                <textarea id="addText" rows="3" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none" placeholder="メモ"></textarea>
-                <input type="url" id="addImage" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none" placeholder="画像URL">
-                <input type="text" id="addTags" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none" placeholder="タグ (カンマ区切り)">
-                <button id="saveNewMemoBtn" class="w-full py-4 bg-blue-600 text-white rounded-xl font-bold">保存してDriveを更新</button>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-1 ml-1">タイトル <span class="text-red-500">*</span></label>
+                    <input type="text" id="addTitle" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none" placeholder="例：絶景カフェ">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-1 ml-1">URL (任意)</label>
+                    <input type="url" id="addUrl" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none" placeholder="https://...">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-1 ml-1">メモ (任意)</label>
+                    <textarea id="addText" rows="3" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none resize-none" placeholder="ここに行きたい！"></textarea>
+                </div>
+                
+                <!-- 画像アップロード機能 -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-1 ml-1">画像 (URLまたはアップロード)</label>
+                    <div class="space-y-2">
+                        <input type="url" id="addImageUrl" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none" placeholder="画像のURLを入力 (https://...)">
+                        <div class="flex items-center gap-3 pl-1">
+                            <span class="text-xs font-bold text-slate-400">または</span>
+                            <label class="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 text-slate-600 rounded-lg cursor-pointer hover:bg-slate-200 transition-colors border border-slate-200 text-xs font-bold">
+                                <i data-lucide="image-plus" size="16"></i> ファイルを選択
+                                <input type="file" id="addImageFile" accept="image/*" class="hidden">
+                            </label>
+                            <span id="imageFileName" class="text-xs text-slate-500 truncate max-w-[150px]"></span>
+                        </div>
+                        <img id="imagePreview" src="" class="hidden w-full h-32 object-cover rounded-xl mt-2 border border-slate-200">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-1 ml-1">タグ (カンマ区切りで複数可)</label>
+                    <input type="text" id="addTags" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none" placeholder="手動入力 または 下から選択">
+                    <!-- 既存タグの候補エリア -->
+                    <div id="existingTagsContainer" class="flex flex-wrap gap-1.5 mt-2 pl-1"></div>
+                </div>
+                
+                <div class="flex gap-2 mt-2">
+                    <button id="deleteMemoBtn" type="button" class="hidden px-4 py-4 bg-red-50 text-red-600 rounded-xl font-bold flex items-center justify-center hover:bg-red-100 active:scale-95 transition-all" title="このメモを削除">
+                        <i data-lucide="trash-2" size="20"></i>
+                    </button>
+                    <button id="saveNewMemoBtn" type="button" class="flex-1 py-4 bg-blue-600 text-white rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-blue-700 active:scale-95 transition-all shadow-md shadow-blue-200">
+                        <i data-lucide="save" size="20"></i>
+                        追加
+                    </button>
+                </div>
             </div>
         </div>
     </div>
 
+    <!-- 画像拡大用ライトボックス -->
+    <div id="lightbox" class="fixed inset-0 z-[100] hidden bg-black/95 flex items-center justify-center p-4 cursor-zoom-out" onclick="this.classList.add('hidden')">
+        <img id="lightboxImg" src="" class="max-w-full max-h-full rounded shadow-2xl" />
+        <button class="absolute top-6 right-6 text-white p-2 bg-white/10 rounded-full hover:bg-white/20"><i data-lucide="x" size="32"></i></button>
+    </div>
+
     <script>
+        // --- 設定値の管理 ---
         let allMemos = [];
         let currentTag = 'all';
         let searchQuery = '';
         let currentDriveFileId = null; 
+        let uploadedImageDataUrl = ''; 
+        let editingMemoId = null; // ★編集中のメモIDを保持する変数
 
-        // config.js の読み込みチェック
+        // --- config.js の読み込みチェック ---
         const isConfigValid = () => {
             return typeof CONFIG !== 'undefined' && CONFIG.CLIENT_ID && CONFIG.API_KEY && 
                    !CONFIG.CLIENT_ID.includes('YOUR_') && !CONFIG.API_KEY.includes('YOUR_');
@@ -133,81 +199,496 @@
         let gapiInited = false;
         let gisInited = false;
 
+        // --- Google Drive 連携ロジック ---
         async function tryInitGoogleApi() {
-            if (!isConfigValid()) {
-                console.warn("config.js が正しく設定されていません。");
-                return;
-            }
+            if (!isConfigValid()) return;
             try {
-                gapi.load('client:picker', async () => {
-                    await gapi.client.init({ apiKey: API_KEY, discoveryDocs: DISCOVERY_DOCS });
-                    gapiInited = true;
+                if (typeof gapi !== 'undefined') {
+                    gapi.load('client:picker', async () => {
+                        await gapi.client.init({ apiKey: API_KEY, discoveryDocs: DISCOVERY_DOCS });
+                        gapiInited = true;
+                        checkStatus();
+                    });
+                }
+                if (typeof google !== 'undefined' && google.accounts) {
+                    tokenClient = google.accounts.oauth2.initTokenClient({
+                        client_id: CLIENT_ID,
+                        scope: SCOPES,
+                        callback: async (resp) => {
+                            if (resp.error !== undefined) {
+                                console.error("Auth Error:", resp);
+                                return;
+                            }
+                            accessToken = resp.access_token;
+                            createPicker();
+                        },
+                    });
+                    gisInited = true;
                     checkStatus();
-                });
-                tokenClient = google.accounts.oauth2.initTokenClient({
-                    client_id: CLIENT_ID, scope: SCOPES,
-                    callback: async (resp) => {
-                        if (resp.error) return;
-                        accessToken = resp.access_token;
-                        createPicker();
-                    },
-                });
-                gisInited = true;
-                checkStatus();
-            } catch (err) { console.error(err); }
+                }
+            } catch (err) { console.error("Google API Init Error:", err); }
         }
 
         function checkStatus() {
-            if (gapiInited && gisInited) document.getElementById('driveBtn').classList.remove('opacity-50');
+            if (gapiInited && gisInited) {
+                const btn = document.getElementById('driveBtn');
+                if (btn) btn.classList.remove('opacity-50');
+            }
         }
 
         document.getElementById('driveBtn').onclick = () => {
             if (!isConfigValid()) {
-                alert("config.js に CLIENT_ID と API_KEY を正しく設定し、GitHub Pages などのWebサーバー経由で開いてください。");
+                alert("Google Driveと連携するには、config.js に CLIENT_ID と API_KEY を正しく設定してください。");
                 return;
             }
-            if (!accessToken) tokenClient.requestAccessToken({prompt: 'consent'});
-            else createPicker();
+            if (!accessToken) {
+                tokenClient.requestAccessToken({prompt: 'consent'});
+            } else {
+                createPicker();
+            }
         };
 
         function createPicker() {
             const picker = new google.picker.PickerBuilder()
                 .addView(new google.picker.DocsView(google.picker.ViewId.DOCS).setMimeTypes('application/json'))
-                .setOAuthToken(accessToken).setDeveloperKey(API_KEY)
+                .setOAuthToken(accessToken)
+                .setDeveloperKey(API_KEY)
                 .setCallback(async (data) => {
                     if (data.action === google.picker.Action.PICKED) {
-                        currentDriveFileId = data.docs[0].id;
-                        const resp = await gapi.client.drive.files.get({ fileId: currentDriveFileId, alt: 'media' });
-                        if (Array.isArray(resp.result)) {
-                            allMemos = resp.result;
-                            render();
+                        currentDriveFileId = data.docs[0].id; 
+                        try {
+                            const resp = await gapi.client.drive.files.get({ fileId: currentDriveFileId, alt: 'media' });
+                            if (Array.isArray(resp.result)) {
+                                allMemos = resp.result;
+                                render();
+                            } else {
+                                alert("ファイルの中身が正しい形式の旅行メモではありません。");
+                            }
+                        } catch (e) {
+                            console.error("File download error:", e);
+                            alert("ファイルの取得に失敗しました。アクセス権限を確認してください。");
                         }
                     }
-                }).build();
+                })
+                .build();
             picker.setVisible(true);
         }
 
-        // 保存や描画のロジックは以前と同じ（簡略化して継続）
+        async function updateDriveFile() {
+            if (!currentDriveFileId || !accessToken) return false;
+            const content = JSON.stringify(allMemos, null, 2);
+            try {
+                const request = gapi.client.request({
+                    path: '/upload/drive/v3/files/' + currentDriveFileId,
+                    method: 'PATCH',
+                    params: { uploadType: 'media' },
+                    body: content
+                });
+                await new Promise((resolve, reject) => {
+                    request.execute(function(resp) {
+                        if (resp && resp.error) reject(resp.error);
+                        else resolve(resp);
+                    });
+                });
+                return true;
+            } catch (err) {
+                console.error("Upload error:", err);
+                alert("Googleドライブへの保存に失敗しました。");
+                return false;
+            }
+        }
+
+        // --- 画像アップロードロジック ---
+        document.getElementById('addImageFile').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            document.getElementById('imageFileName').textContent = file.name;
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const img = new Image();
+                img.onload = () => {
+                    const MAX_SIZE = 800;
+                    let w = img.width; let h = img.height;
+                    if (w > h && w > MAX_SIZE) { h *= MAX_SIZE / w; w = MAX_SIZE; } 
+                    else if (h > MAX_SIZE) { w *= MAX_SIZE / h; h = MAX_SIZE; }
+                    
+                    const canvas = document.createElement('canvas');
+                    canvas.width = w; canvas.height = h;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, w, h);
+                    
+                    uploadedImageDataUrl = canvas.toDataURL('image/jpeg', 0.8);
+                    
+                    const preview = document.getElementById('imagePreview');
+                    preview.src = uploadedImageDataUrl;
+                    preview.classList.remove('hidden');
+                    document.getElementById('addImageUrl').value = '';
+                };
+                img.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        });
+
+        document.getElementById('addImageUrl').addEventListener('input', (e) => {
+            const url = e.target.value.trim();
+            const preview = document.getElementById('imagePreview');
+            if (url) {
+                preview.src = url;
+                preview.classList.remove('hidden');
+                uploadedImageDataUrl = '';
+                document.getElementById('addImageFile').value = '';
+                document.getElementById('imageFileName').textContent = '';
+            } else {
+                preview.classList.add('hidden');
+                preview.src = '';
+            }
+        });
+
+        // --- タグ入力・選択ロジック ---
+        function renderExistingTagsInModal() {
+            const tagsContainer = document.getElementById('existingTagsContainer');
+            tagsContainer.innerHTML = '';
+            
+            const tags = new Set();
+            allMemos.forEach(m => (m.tags || []).forEach(t => tags.add(t)));
+            const sortedTags = Array.from(tags).sort();
+
+            if (sortedTags.length === 0) return;
+
+            sortedTags.forEach(tag => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'px-3 py-1 bg-slate-100 text-slate-500 text-xs rounded-lg font-bold hover:bg-slate-200 transition-colors border border-slate-200 cursor-pointer';
+                btn.textContent = '#' + tag;
+                
+                btn.onclick = () => {
+                    const input = document.getElementById('addTags');
+                    let currentTags = input.value.split(',').map(t => t.trim()).filter(t => t.length > 0);
+                    
+                    if (currentTags.includes(tag)) {
+                        currentTags = currentTags.filter(t => t !== tag);
+                    } else {
+                        currentTags.push(tag);
+                    }
+                    
+                    input.value = currentTags.join(', ');
+                    updateTagChipStyles(); 
+                };
+                tagsContainer.appendChild(btn);
+            });
+            updateTagChipStyles(); 
+        }
+
+        function updateTagChipStyles() {
+            const input = document.getElementById('addTags');
+            const currentTags = input.value.split(',').map(t => t.trim()).filter(t => t.length > 0);
+            const btns = document.getElementById('existingTagsContainer').querySelectorAll('button');
+            
+            btns.forEach(btn => {
+                const tag = btn.textContent.replace('#', '');
+                if (currentTags.includes(tag)) {
+                    btn.classList.remove('bg-slate-100', 'text-slate-500', 'border-slate-200');
+                    btn.classList.add('bg-blue-100', 'text-blue-600', 'border-blue-300');
+                } else {
+                    btn.classList.remove('bg-blue-100', 'text-blue-600', 'border-blue-300');
+                    btn.classList.add('bg-slate-100', 'text-slate-500', 'border-slate-200');
+                }
+            });
+        }
+
+        document.getElementById('addTags').addEventListener('input', updateTagChipStyles);
+
+        // --- 新規メモ追加 / 編集 の準備 ---
+        document.getElementById('fabAdd').onclick = () => {
+            editingMemoId = null; // 新規追加モード
+            document.getElementById('modalTitle').textContent = '新しいメモを追加';
+            
+            document.getElementById('addTitle').value = '';
+            document.getElementById('addUrl').value = '';
+            document.getElementById('addText').value = '';
+            document.getElementById('addTags').value = '';
+            
+            document.getElementById('addImageUrl').value = '';
+            document.getElementById('addImageFile').value = '';
+            document.getElementById('imageFileName').textContent = '';
+            uploadedImageDataUrl = '';
+            const preview = document.getElementById('imagePreview');
+            preview.src = '';
+            preview.classList.add('hidden');
+
+            document.getElementById('deleteMemoBtn').classList.add('hidden'); // 削除ボタンを隠す
+
+            renderExistingTagsInModal();
+
+            const btn = document.getElementById('saveNewMemoBtn');
+            if (currentDriveFileId && accessToken) {
+                btn.innerHTML = `<i data-lucide="save" size="20"></i> 保存してGoogleドライブを更新`;
+            } else {
+                btn.innerHTML = `<i data-lucide="save" size="20"></i> 追加 (ローカルのみ)`;
+            }
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+
+            document.getElementById('addModal').classList.remove('hidden');
+        };
+
+        // --- ★既存メモの編集ロジック ---
+        window.editMemo = (id) => {
+            const memo = allMemos.find(m => m.id === id);
+            if (!memo) return;
+
+            editingMemoId = id; // 編集モード
+            document.getElementById('modalTitle').textContent = 'メモを編集';
+            
+            document.getElementById('addTitle').value = memo.title || '';
+            document.getElementById('addUrl').value = memo.url || '';
+            document.getElementById('addText').value = memo.text || '';
+            document.getElementById('addTags').value = (memo.tags || []).join(', ');
+            
+            document.getElementById('addImageUrl').value = '';
+            document.getElementById('addImageFile').value = '';
+            document.getElementById('imageFileName').textContent = '';
+            uploadedImageDataUrl = '';
+            
+            const preview = document.getElementById('imagePreview');
+            if (memo.image) {
+                if (memo.image.startsWith('http')) {
+                    document.getElementById('addImageUrl').value = memo.image;
+                } else {
+                    // base64画像の場合はプレビューだけ表示する
+                    uploadedImageDataUrl = memo.image; 
+                }
+                preview.src = memo.image;
+                preview.classList.remove('hidden');
+            } else {
+                preview.src = '';
+                preview.classList.add('hidden');
+            }
+
+            document.getElementById('deleteMemoBtn').classList.remove('hidden'); // 削除ボタンを表示
+
+            renderExistingTagsInModal();
+
+            const btn = document.getElementById('saveNewMemoBtn');
+            if (currentDriveFileId && accessToken) {
+                btn.innerHTML = `<i data-lucide="save" size="20"></i> 上書き保存 (Drive同期)`;
+            } else {
+                btn.innerHTML = `<i data-lucide="save" size="20"></i> 上書き保存 (ローカル)`;
+            }
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+
+            document.getElementById('addModal').classList.remove('hidden');
+        };
+
+        // --- メモの削除ロジック ---
+        document.getElementById('deleteMemoBtn').onclick = async () => {
+            if (!confirm("このメモを削除しますか？")) return;
+            
+            // 削除前の状態を保持（エラー時の復元用）
+            const backupMemos = [...allMemos];
+            allMemos = allMemos.filter(m => m.id !== editingMemoId);
+            
+            if (currentDriveFileId && accessToken) {
+                const btn = document.getElementById('deleteMemoBtn');
+                const originalHtml = btn.innerHTML;
+                btn.innerHTML = `<i data-lucide="refresh-cw" class="animate-spin" size="20"></i>`;
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+
+                const success = await updateDriveFile();
+
+                btn.innerHTML = originalHtml;
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+
+                if (success) {
+                    document.getElementById('addModal').classList.add('hidden');
+                    render();
+                } else {
+                    allMemos = backupMemos; // 失敗時は元に戻す
+                }
+            } else {
+                document.getElementById('addModal').classList.add('hidden');
+                render();
+            }
+        };
+
+        // モーダルを閉じる
+        document.getElementById('closeAddModalBtn').onclick = () => {
+            document.getElementById('addModal').classList.add('hidden');
+        };
+
+        // 保存ボタンを押したときの処理
+        document.getElementById('saveNewMemoBtn').onclick = async () => {
+            const title = document.getElementById('addTitle').value.trim();
+            if (!title) {
+                alert("タイトルは必須です。");
+                return;
+            }
+
+            const url = document.getElementById('addUrl').value.trim();
+            const text = document.getElementById('addText').value.trim();
+            const tagsInput = document.getElementById('addTags').value.trim();
+            
+            const imageUrlInput = document.getElementById('addImageUrl').value.trim();
+            const finalImage = uploadedImageDataUrl || imageUrlInput;
+            
+            let tags = [];
+            if (tagsInput) {
+                tags = tagsInput.split(',').map(t => t.trim()).filter(t => t.length > 0);
+            }
+
+            const originalMemo = editingMemoId ? allMemos.find(m => m.id === editingMemoId) : null;
+            
+            const newMemo = {
+                id: editingMemoId ? editingMemoId : "manual-" + Date.now(),
+                url: url,
+                title: title,
+                text: text,
+                image: finalImage,
+                tags: tags,
+                // 編集時は元のタイムスタンプを維持する
+                timestamp: originalMemo ? originalMemo.timestamp : new Date().toISOString()
+            };
+
+            const backupMemos = [...allMemos];
+
+            if (editingMemoId) {
+                // 編集（上書き）
+                const index = allMemos.findIndex(m => m.id === editingMemoId);
+                if (index !== -1) allMemos[index] = newMemo;
+            } else {
+                // 新規追加
+                allMemos.unshift(newMemo);
+            }
+            
+            if (currentDriveFileId && accessToken) {
+                const btn = document.getElementById('saveNewMemoBtn');
+                const originalBtnHtml = btn.innerHTML;
+                btn.disabled = true;
+                btn.innerHTML = `<i data-lucide="refresh-cw" class="animate-spin" size="20"></i> 保存中...`;
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+
+                const success = await updateDriveFile();
+
+                btn.disabled = false;
+                btn.innerHTML = originalBtnHtml;
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+
+                if (success) {
+                    document.getElementById('addModal').classList.add('hidden');
+                    render(); 
+                } else {
+                    allMemos = backupMemos; // 失敗時は元に戻す
+                }
+            } else {
+                document.getElementById('addModal').classList.add('hidden');
+                render();
+            }
+        };
+
+        // --- 画面描画ロジック ---
         function render() {
             const container = document.getElementById('memoContainer');
+            const tagList = document.getElementById('tagList');
             if (!container) return;
+            
             const filtered = allMemos.filter(m => {
                 const matchesTag = currentTag === 'all' || (m.tags && m.tags.includes(currentTag));
                 const matchesSearch = ((m.title || '') + (m.text || '')).toLowerCase().includes(searchQuery.toLowerCase());
                 return matchesTag && matchesSearch;
             });
-            if (allMemos.length > 0) {
-                container.innerHTML = filtered.map(m => `
-                    <div class="memo-item bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm p-5">
-                        ${m.image ? `<img src="${m.image}" class="w-full mb-4 rounded-xl">` : ''}
-                        <h3 class="font-bold mb-2">${m.title}</h3>
-                        <p class="text-sm text-slate-600 mb-4">${m.text || ''}</p>
-                        <a href="${m.url}" target="_blank" class="text-blue-600 text-xs font-bold">🔗 サイトを見る</a>
+
+            if (allMemos.length === 0) {
+                container.innerHTML = `
+                    <div class="col-span-full py-32 flex flex-col items-center text-center px-10">
+                        <div class="w-20 h-20 bg-blue-50 text-blue-300 rounded-3xl flex items-center justify-center mb-6">
+                            <i data-lucide="smartphone" size="40"></i>
+                        </div>
+                        <h2 class="text-xl font-bold text-slate-700">データが読み込まれていません</h2>
+                        <p class="text-slate-400 text-sm mt-2 max-w-xs">
+                            右下の「＋」ボタンからメモを追加するか、ファイルを読み込んでください。
+                        </p>
+                    </div>`;
+                return;
+            }
+
+            container.innerHTML = filtered.length === 0 
+                ? `<div class="col-span-full py-20 text-center text-slate-400 font-medium animate-pulse">該当するメモがありません。</div>`
+                : filtered.map(m => `
+                    <div class="memo-item bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col">
+                        ${m.image ? `<img src="${m.image}" class="w-full h-auto cursor-zoom-in block" onclick="event.stopPropagation(); openLightbox('${m.image}')" loading="lazy">` : ''}
+                        <div class="p-5 flex-1 flex flex-col">
+                            <h3 class="font-bold text-slate-800 leading-tight mb-3 text-lg">${m.title || '無題のメモ'}</h3>
+                            ${m.text ? `<div class="bg-blue-50/50 text-blue-800 text-sm p-3.5 rounded-2xl border-l-4 border-blue-500 italic mb-4 whitespace-pre-wrap leading-relaxed">${m.text}</div>` : ''}
+                            <div class="flex flex-wrap gap-1.5 mb-4">
+                                ${(m.tags || []).map(t => `<span class="px-2 py-0.5 bg-slate-100 text-slate-500 text-[10px] rounded font-bold uppercase tracking-wider">#${t}</span>`).join('')}
+                            </div>
+                            <div class="flex justify-between items-center pt-4 border-t border-slate-50 mt-auto">
+                                ${m.url ? `<a href="${m.url}" target="_blank" class="text-blue-600 text-xs font-bold flex items-center gap-1.5 hover:underline"><i data-lucide="external-link" size="14"></i> サイトを見る</a>` : '<span></span>'}
+                                <div class="flex items-center gap-3">
+                                    <button onclick="editMemo('${m.id}')" class="text-slate-400 hover:text-blue-600 transition-colors" title="編集">
+                                        <i data-lucide="pencil" size="16"></i>
+                                    </button>
+                                    <span class="text-[10px] text-slate-300 font-bold">${m.timestamp ? new Date(m.timestamp).toLocaleDateString() : ''}</span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 `).join('');
-            }
+
+            const tags = new Set();
+            allMemos.forEach(m => (m.tags || []).forEach(t => tags.add(t)));
+            
+            tagList.querySelectorAll('.dynamic-tag').forEach(c => c.remove());
+            Array.from(tags).sort().forEach(tag => {
+                const btn = document.createElement('button');
+                btn.className = `dynamic-tag px-5 py-2 rounded-full text-xs font-bold whitespace-nowrap transition-all ${currentTag === tag ? 'bg-blue-600 text-white shadow-md' : 'bg-white border border-slate-200 text-slate-500 hover:text-blue-600'}`;
+                btn.textContent = tag;
+                btn.onclick = () => { currentTag = tag; updateTagUI(); render(); };
+                tagList.appendChild(btn);
+            });
+
             if (typeof lucide !== 'undefined') lucide.createIcons();
         }
+
+        function updateTagUI() {
+            document.querySelectorAll('.tag-chip, .dynamic-tag').forEach(btn => {
+                const tag = btn.getAttribute('data-tag') || btn.textContent;
+                if (tag === currentTag || (tag === 'すべて' && currentTag === 'all')) {
+                    btn.classList.add('bg-blue-600', 'text-white', 'shadow-md');
+                    btn.classList.remove('bg-white', 'text-slate-500');
+                } else {
+                    btn.classList.remove('bg-blue-600', 'text-white', 'shadow-md');
+                    btn.classList.add('bg-white', 'text-slate-500');
+                }
+            });
+        }
+
+        // --- 各種イベント設定 ---
+        document.getElementById('fileInput').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                try {
+                    const data = JSON.parse(event.target.result);
+                    if (Array.isArray(data)) { 
+                        allMemos = data; 
+                        currentDriveFileId = null; 
+                        render(); 
+                    }
+                } catch (err) { alert("JSON形式が正しくありません。"); }
+            };
+            reader.readAsText(file);
+        });
+
+        document.getElementById('searchInput').oninput = (e) => { searchQuery = e.target.value; render(); };
+        document.querySelector('[data-tag="all"]').onclick = () => { currentTag = 'all'; updateTagUI(); render(); };
+
+        window.openLightbox = (src) => {
+            const lb = document.getElementById('lightbox');
+            document.getElementById('lightboxImg').src = src;
+            lb.classList.remove('hidden');
+        };
 
         window.addEventListener('load', () => {
             tryInitGoogleApi();
@@ -216,4 +697,5 @@
     </script>
 </body>
 </html>
+
 
