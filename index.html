@@ -4,14 +4,19 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Travel Scrapper Viewer</title>
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
     
+    <!-- 大容量データベース（IndexedDB）ライブラリ -->
     <script src="https://cdn.jsdelivr.net/npm/idb-keyval@6/dist/umd.js"></script>
     
+    <!-- Google API Loader -->
     <script async defer src="https://apis.google.com/js/api.js"></script>
     <script async defer src="https://accounts.google.com/gsi/client"></script>
 
+    <!-- 分離した設定ファイル(config.js)の読み込み -->
     <script src="config.js" onerror="console.warn('config.js が見つかりません。ローカル動作モードで起動します。')"></script>
 
     <style>
@@ -42,6 +47,7 @@
 </head>
 <body class="text-slate-900 pb-20">
 
+    <!-- ナビゲーションバー -->
     <nav class="bg-white/80 backdrop-blur-md border-b border-slate-200 sticky top-0 z-40 px-4 py-3 shadow-sm">
         <div class="max-w-6xl mx-auto flex justify-between items-center">
             <div class="flex items-center gap-3">
@@ -49,27 +55,31 @@
                     <i data-lucide="globe" size="24"></i>
                 </div>
                 <div>
+                    <!-- ★ バージョン番号を v1.4.9 に更新 -->
                     <h1 class="text-lg font-black text-slate-800 tracking-tight flex items-center gap-2">
-                        Travel Scrapper <span class="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200">v1.4.8</span>
+                        Travel Scrapper <span class="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200">v1.4.9</span>
                     </h1>
                     <p class="text-[10px] text-blue-600 font-bold uppercase tracking-widest">Web Viewer</p>
                 </div>
             </div>
             <div class="flex gap-2">
+                <!-- ログアウトボタン -->
                 <button id="logoutBtn" class="hidden flex items-center gap-2 px-3 py-2 bg-red-50 text-red-600 rounded-xl hover:bg-red-100 font-bold text-sm transition-colors border border-red-100" title="ログアウトして認証情報をクリア">
                     <i data-lucide="log-out" size="18"></i>
                 </button>
 
+                <!-- Googleドライブボタングループ -->
                 <div id="driveBtnGroup" class="flex items-center bg-green-50 text-green-700 rounded-xl shadow-sm opacity-50 transition-all">
                     <button id="driveSyncBtn" class="flex items-center gap-2 px-4 py-2 hover:bg-green-100 rounded-l-xl font-bold text-sm transition-colors" title="Googleドライブと同期">
                         <i data-lucide="refresh-cw" size="18"></i>
                         <span id="driveSyncText" class="hidden sm:inline">Drive同期</span>
                     </button>
                     <div class="w-px bg-green-200 h-6"></div>
-                    <button id="drivePickerBtn" class="px-3 py-2 hover:bg-green-100 rounded-r-xl transition-colors" title="別のGoogleドライブファイルを選択">
+                    <button id="drivePickerBtn" class="px-3 py-2 hover:bg-green-100 rounded-r-xl transition-colors" title="別のGoogleドライブファイルを選択" oncontextmenu="event.preventDefault(); resetAuth();">
                         <i data-lucide="folder-search" size="18"></i>
                     </button>
                 </div>
+                <!-- ローカルファイルボタン -->
                 <label class="flex items-center gap-2 px-4 py-2 bg-slate-800 text-white rounded-xl hover:bg-slate-700 cursor-pointer shadow-md transition-transform active:scale-95 font-bold text-sm" title="ローカルファイルを開く">
                     <i data-lucide="upload" size="18"></i>
                     <span class="hidden sm:inline">ファイル読込</span>
@@ -79,6 +89,7 @@
         </div>
     </nav>
 
+    <!-- 検索とタグフィルター -->
     <div class="max-w-6xl mx-auto px-4 mt-6">
         <div class="bg-white p-4 md:p-6 rounded-3xl border border-slate-200 shadow-sm flex flex-col gap-4">
             <div class="relative">
@@ -97,6 +108,7 @@
         </div>
     </div>
 
+    <!-- メモ表示エリア -->
     <main id="memoContainer" class="max-w-6xl mx-auto px-4 mt-8 memo-grid">
         <div class="col-span-full py-32 flex flex-col items-center text-center px-10">
             <div class="w-20 h-20 bg-blue-50 text-blue-300 rounded-3xl flex items-center justify-center mb-6">
@@ -107,10 +119,12 @@
         </div>
     </main>
 
+    <!-- フローティングアクションボタン (メモ追加) -->
     <button id="fabAdd" class="fixed bottom-6 right-6 w-14 h-14 bg-blue-600 text-white rounded-full shadow-lg shadow-blue-300 flex items-center justify-center hover:bg-blue-700 transition-transform active:scale-90 z-50">
         <i data-lucide="plus" size="28"></i>
     </button>
 
+    <!-- 追加・編集モーダル -->
     <div id="addModal" class="fixed inset-0 z-[60] hidden flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
         <div class="bg-white w-full max-w-md rounded-[2rem] p-6 shadow-2xl modal-enter max-h-[90vh] overflow-y-auto no-scrollbar">
             <div class="flex justify-between items-center mb-6">
@@ -167,6 +181,7 @@
         </div>
     </div>
 
+    <!-- 画像拡大用ライトボックス -->
     <div id="lightbox" class="fixed inset-0 z-[100] hidden bg-black/95 flex items-center justify-center p-4 cursor-zoom-out" onclick="this.classList.add('hidden')">
         <img id="lightboxImg" src="" class="max-w-full max-h-full rounded shadow-2xl" />
         <button class="absolute top-6 right-6 text-white p-2 bg-white/10 rounded-full hover:bg-white/20"><i data-lucide="x" size="32"></i></button>
@@ -196,13 +211,13 @@
         let gisInited = false;
         let actionAfterAuth = null;
 
-        // ★ ログアウト処理（ログイン情報の完全リセット）
+        // ログアウト処理
         async function logout() {
-            if(!confirm("ログアウトしてログイン情報をリセットしますか？")) return;
+            if(!confirm("ログアウトしますか？")) return;
             await idbKeyval.del('gapi_access_token');
             await idbKeyval.del('gapi_token_expiry');
             accessToken = null;
-            location.reload(); // 確実にクリーンな状態にするためにリロード
+            location.reload(); 
         }
         document.getElementById('logoutBtn').onclick = logout;
 
@@ -235,18 +250,17 @@
         async function saveCache() {
             await idbKeyval.set('travelMemos_cache', allMemos);
             if (currentDriveFileId) { await idbKeyval.set('driveFileId_cache', currentDriveFileId); }
+            else { await idbKeyval.del('driveFileId_cache'); }
             updateDriveButtonState();
         }
 
         function updateDriveButtonState() {
             const syncText = document.getElementById('driveSyncText');
             const logoutBtn = document.getElementById('logoutBtn');
-            const driveGroup = document.getElementById('driveBtnGroup');
 
             if (currentDriveFileId) { syncText.textContent = "Drive同期"; }
             else { syncText.textContent = "Driveを開く"; }
 
-            // アクセストークンがあればログアウトボタンを表示
             if (accessToken) { logoutBtn.classList.remove('hidden'); }
             else { logoutBtn.classList.add('hidden'); }
         }
@@ -316,27 +330,62 @@
             picker.setVisible(true);
         }
 
+        // ★ エラーの詳細を表示し、自動修復を促すように強化
         async function fetchDriveData(fileId) {
             const btn = document.getElementById('driveSyncBtn');
             btn.innerHTML = `<i data-lucide="refresh-cw" class="animate-spin" size="18"></i><span class="hidden sm:inline">同期中...</span>`;
             if (typeof lucide !== 'undefined') lucide.createIcons();
+            
             try {
                 if (gapi.client) gapi.client.setToken({ access_token: accessToken });
+                
                 const resp = await gapi.client.drive.files.get({ fileId: fileId, alt: 'media' });
                 let data = resp.result;
-                if (typeof data === 'string') data = JSON.parse(data);
+                
+                // データが文字列の場合はパースを試みる（安全な処理）
+                if (typeof data === 'string') {
+                    try { 
+                        data = JSON.parse(data); 
+                    } catch(e) { 
+                        throw new Error("JSON_PARSE_ERROR"); 
+                    }
+                }
+                
                 if (Array.isArray(data)) {
-                    allMemos = data; currentDriveFileId = fileId;
-                    await saveCache(); render();
+                    allMemos = data; 
+                    currentDriveFileId = fileId;
+                    await saveCache(); 
+                    render();
+                } else {
+                    throw new Error("INVALID_FORMAT");
                 }
             } catch (e) {
-                console.error(e);
-                if (e.status === 401 || e.status === 403) {
+                console.error("Fetch Error Detail:", e);
+                
+                // エラーコードとメッセージを抽出
+                const status = e.status || (e.result && e.result.error && e.result.error.code) || e.code;
+                const msg = e.message || (e.result && e.result.error && e.result.error.message) || String(e);
+
+                if (status === 401 || status === 403) {
                     await idbKeyval.del('gapi_access_token');
                     accessToken = null;
-                    alert("認証が切れました。再ログインしてください。");
-                } else { alert("同期エラーが発生しました。"); }
-            } finally { resetSyncButton(); updateDriveButtonState(); }
+                    alert(`認証エラー(${status})が発生しました。\n安全のためログアウトしました。再度ログインしてください。`);
+                } else if (status === 404) {
+                    alert("【重要】ファイルが見つかりません！\n\n別のアカウントでログインしたか、ファイルが削除された可能性があります。\n右側の「フォルダアイコン」を押して、再度ファイルを選択し直してください。");
+                    // エラーの元になったIDをクリアして、次回はファイル選択を開かせる
+                    currentDriveFileId = null;
+                    await saveCache();
+                } else if (msg === "JSON_PARSE_ERROR" || msg === "INVALID_FORMAT") {
+                    alert("選択されたファイルが正しい「旅行メモ」のデータではありません。\nフォルダアイコンから、別のファイルを選択してください。");
+                    currentDriveFileId = null;
+                    await saveCache();
+                } else { 
+                    alert(`同期エラーが発生しました。\nステータス: ${status}\n詳細: ${msg}`); 
+                }
+            } finally { 
+                resetSyncButton(); 
+                updateDriveButtonState(); 
+            }
         }
 
         async function updateDriveFile() {
@@ -357,9 +406,17 @@
                 return true;
             } catch (err) {
                 console.error("Drive upload failed", err);
-                if (err.code === 401 || err.code === 403) {
+                const status = err.code || err.status;
+                if (status === 401 || status === 403) {
                     await idbKeyval.del('gapi_access_token');
                     accessToken = null;
+                    alert("保存権限エラー：再ログインが必要です。");
+                } else if (status === 404) {
+                    alert("保存先ファイルが見つかりません。フォルダアイコンから選び直してください。");
+                    currentDriveFileId = null;
+                    await saveCache();
+                } else {
+                    alert("保存に失敗しました: " + (err.message || "不明なエラー"));
                 }
                 return false;
             }
@@ -467,7 +524,6 @@
                 render();
             } else {
                 allMemos = oldMemos;
-                alert("保存に失敗しました。再ログインが必要かもしれません。");
             }
             btn.disabled = false; btnText.textContent = originalText;
         };
