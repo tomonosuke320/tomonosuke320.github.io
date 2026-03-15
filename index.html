@@ -71,7 +71,7 @@
                     </div>
                     <div>
                         <h1 class="text-lg font-black text-slate-800 tracking-tight leading-none mb-1">Travel Scrapper</h1>
-                        <p class="text-[10px] text-blue-600 font-bold uppercase tracking-[0.2em]">Web Viewer v1.6.8 (Fix)</p>
+                        <p class="text-[10px] text-blue-600 font-bold uppercase tracking-[0.2em]">Web Viewer v1.6.9</p>
                     </div>
                 </div>
 
@@ -80,7 +80,7 @@
                         <i data-lucide="settings" size="20"></i>
                     </button>
                     <button id="driveSyncBtn" class="flex items-center gap-2 px-5 py-2.5 bg-green-600 text-white rounded-xl font-bold text-sm shadow-lg shadow-green-100 active:scale-95 transition-all">
-                        <i data-lucide="refresh-cw" size="18"></i>
+                        <span id="syncIconWrapper" class="inline-block"><i data-lucide="refresh-cw" size="18"></i></span>
                         <span id="driveSyncText">Drive同期</span>
                     </button>
                 </div>
@@ -233,14 +233,14 @@
     <div id="settingsModal" class="fixed inset-0 z-[70] hidden flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
         <div class="bg-white w-full max-w-sm rounded-[2rem] p-6 shadow-2xl modal-enter">
             <h2 class="text-lg font-black text-slate-800 mb-4 flex items-center gap-2">
-                <i data-lucide="settings" size="20"></i> AI設定
+                <i data-lucide="settings" size="20"></i> アプリ設定
             </h2>
             <div class="space-y-4">
                 <div>
                     <label class="block text-xs font-black text-slate-500 mb-1.5 uppercase tracking-widest">Gemini API Key</label>
                     <input type="password" id="geminiApiKeyInput" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 text-sm" placeholder="AI Studioのキーを入力">
                     <p class="text-[10px] text-slate-400 mt-2 leading-relaxed">
-                        ※AI推察機能を使う場合に必要です。<br>入力したキーはご利用のブラウザにのみ安全に保存されます。
+                        ※GitHub Pages等の公開サイトでAI推察機能を使う場合に必要です。<br>入力したキーはご利用のブラウザにのみ保存されます。
                     </p>
                 </div>
                 <button id="saveSettingsBtn" class="w-full py-3 bg-slate-800 text-white rounded-xl font-bold hover:bg-slate-900 transition-colors">設定を保存</button>
@@ -264,7 +264,7 @@
         let editingMemoId = null;
 
         // --- Config & API ---
-        const apiKey = ""; // Canvas Provides Key automatically
+        const apiKey = ""; // Canvas Provides Key automatically (MUST BE EMPTY)
         let userSetGeminiKey = ""; // 設定から入力されたAPIキー
 
         const CONFIG_READY = (typeof CONFIG !== 'undefined' && CONFIG.CLIENT_ID && !CONFIG.CLIENT_ID.includes('YOUR_'));
@@ -279,7 +279,7 @@
         function showMsg(message, isError = false) {
             const container = document.getElementById('toastContainer');
             const toast = document.createElement('div');
-            toast.className = `px-6 py-3 rounded-full text-sm font-bold shadow-xl transition-all duration-300 z-[9999] opacity-0 translate-y-4 ${isError ? 'bg-red-600 text-white' : 'bg-slate-800 text-white'}`;
+            toast.className = `px-6 py-3 rounded-full text-sm font-bold shadow-xl transition-all duration-300 opacity-0 translate-y-4 ${isError ? 'bg-red-600 text-white' : 'bg-slate-800 text-white'}`;
             toast.textContent = message;
             container.appendChild(toast);
             
@@ -303,56 +303,40 @@
             };
         }
 
-        // --- AI Implementation (404対策付き) ---
+        // --- AI Implementation ---
         async function callGeminiAI(userQuery, systemInstruction) {
-            const keyToUse = userSetGeminiKey || apiKey || "";
-            if (!keyToUse) {
-                throw new Error("APIキーが未設定です。右上の設定(歯車)から入力してください。");
-            }
+            // ユーザー設定キーがあれば優先、なければ空文字(Canvas環境の自動補完に任せる)
+            const keyToUse = userSetGeminiKey || apiKey;
 
-            // 404エラーを回避するため、複数のモデルを順番に試す
-            const modelsToTry = [
-                "gemini-2.5-flash", 
-                "gemini-1.5-flash",
-                "gemini-2.5-flash-preview-09-2025"
-            ];
+            // 注意: Canvas環境では空文字のままリクエストする必要があるため、ここで空チェックのエラー出しは行いません。
 
-            let lastErr = null;
+            const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${keyToUse}`;
+            const payload = {
+                contents: [{ parts: [{ text: userQuery }] }],
+                systemInstruction: { parts: [{ text: systemInstruction }] }
+            };
 
-            for (const model of modelsToTry) {
-                const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${keyToUse}`;
-                const payload = {
-                    contents: [{ parts: [{ text: userQuery }] }],
-                    systemInstruction: { parts: [{ text: systemInstruction }] }
-                };
-
-                for (let i = 0; i < 3; i++) {
-                    try {
-                        const response = await fetch(endpoint, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(payload)
-                        });
-                        
-                        if (response.status === 404) {
-                            lastErr = new Error(`モデルが見つかりません(404)`);
-                            break; // このモデルは諦めて次を試す
-                        }
-                        if (response.status === 400 || response.status === 403) {
-                            const errTxt = await response.text();
-                            throw new Error(`API権限エラー(${response.status})`);
-                        }
-                        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-                        
-                        const result = await response.json();
-                        return result.candidates?.[0]?.content?.parts?.[0]?.text;
-                    } catch (err) {
-                        lastErr = err;
-                        await new Promise(r => setTimeout(r, Math.pow(2, i) * 1000));
+            for (let i = 0; i < 6; i++) {
+                try {
+                    const response = await fetch(endpoint, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    
+                    if (response.status === 400 || response.status === 403) {
+                        throw new Error(`APIキーが設定されていないか、無効です。設定(歯車)から入力してください。`);
                     }
+                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                    
+                    const result = await response.json();
+                    return result.candidates?.[0]?.content?.parts?.[0]?.text;
+                } catch (err) {
+                    if (err.message.includes("APIキー")) throw err; // 権限エラーならすぐ投げる
+                    if (i === 5) throw err;
+                    await new Promise(r => setTimeout(r, Math.pow(2, i) * 1000));
                 }
             }
-            throw lastErr || new Error("AI通信に失敗しました");
         }
 
         async function handleAiMapGeneration() {
@@ -537,12 +521,12 @@
         }
 
         async function fetchDriveMemos(fileId) {
-            const syncBtn = document.getElementById('driveSyncBtn');
             const btnText = document.getElementById('driveSyncText');
-            const icon = syncBtn?.querySelector('i');
+            const iconWrapper = document.getElementById('syncIconWrapper');
             
             if (btnText) btnText.textContent = "同期中...";
-            if (icon) icon.classList.add('animate-spin');
+            // アイコン自体(i/svg)ではなく、親要素(span)を回すことで置換されても止まるようにする
+            if (iconWrapper) iconWrapper.classList.add('animate-spin');
             
             try {
                 const resp = await gapi.client.drive.files.get({ fileId: fileId, alt: 'media' });
@@ -561,7 +545,7 @@
                 }
             } finally {
                 if (btnText) btnText.textContent = currentDriveFileId ? "Drive同期" : "Driveを開く";
-                if (icon) icon.classList.remove('animate-spin');
+                if (iconWrapper) iconWrapper.classList.remove('animate-spin');
             }
         }
 
