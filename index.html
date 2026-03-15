@@ -57,11 +57,17 @@
                 </div>
             </div>
             <div class="flex gap-2">
-                <!-- Googleドライブボタン -->
-                <button id="driveBtn" class="flex items-center gap-2 px-4 py-2 bg-green-50 text-green-700 rounded-xl hover:bg-green-100 transition-all font-bold text-sm opacity-50 shadow-sm" title="Googleドライブから開く">
-                    <i data-lucide="database" size="18"></i>
-                    <span class="hidden sm:inline">Driveから開く</span>
-                </button>
+                <!-- Googleドライブボタングループ (同期とファイル選択に分割) -->
+                <div id="driveBtnGroup" class="flex items-center bg-green-50 text-green-700 rounded-xl shadow-sm opacity-50 transition-all">
+                    <button id="driveSyncBtn" class="flex items-center gap-2 px-4 py-2 hover:bg-green-100 rounded-l-xl font-bold text-sm transition-colors" title="Googleドライブと同期して最新状態にする">
+                        <i data-lucide="refresh-cw" size="18"></i>
+                        <span id="driveSyncText" class="hidden sm:inline">Drive同期</span>
+                    </button>
+                    <div class="w-px bg-green-200 h-6"></div>
+                    <button id="drivePickerBtn" class="px-3 py-2 hover:bg-green-100 rounded-r-xl transition-colors" title="別のGoogleドライブファイルを選択">
+                        <i data-lucide="folder-search" size="18"></i>
+                    </button>
+                </div>
                 <!-- ローカルファイルボタン -->
                 <label class="flex items-center gap-2 px-4 py-2 bg-slate-800 text-white rounded-xl hover:bg-slate-700 cursor-pointer shadow-md transition-transform active:scale-95 font-bold text-sm" title="ローカルファイルを開く">
                     <i data-lucide="upload" size="18"></i>
@@ -181,7 +187,7 @@
         let searchQuery = '';
         let currentDriveFileId = null; 
         let uploadedImageDataUrl = ''; 
-        let editingMemoId = null; // ★編集中のメモIDを保持する変数
+        let editingMemoId = null;
 
         // --- config.js の読み込みチェック ---
         const isConfigValid = () => {
@@ -198,6 +204,39 @@
         let accessToken = null;
         let gapiInited = false;
         let gisInited = false;
+        let actionAfterAuth = null; // 'sync' or 'picker'
+
+        // --- キャッシュ（データ保持）ロジック ---
+        function loadCache() {
+            const cachedMemos = localStorage.getItem('travelMemos_cache');
+            if (cachedMemos) {
+                try { 
+                    allMemos = JSON.parse(cachedMemos); 
+                } catch(e) { console.error("Cache parse error", e); }
+            }
+            currentDriveFileId = localStorage.getItem('driveFileId_cache');
+            updateDriveButtonState();
+            if (allMemos.length > 0) render();
+        }
+
+        function saveCache() {
+            localStorage.setItem('travelMemos_cache', JSON.stringify(allMemos));
+            if (currentDriveFileId) {
+                localStorage.setItem('driveFileId_cache', currentDriveFileId);
+            } else {
+                localStorage.removeItem('driveFileId_cache');
+            }
+            updateDriveButtonState();
+        }
+
+        function updateDriveButtonState() {
+            const syncText = document.getElementById('driveSyncText');
+            if (currentDriveFileId) {
+                if(syncText) syncText.textContent = "Drive同期";
+            } else {
+                if(syncText) syncText.textContent = "Driveを開く";
+            }
+        }
 
         // --- Google Drive 連携ロジック ---
         async function tryInitGoogleApi() {
@@ -217,10 +256,16 @@
                         callback: async (resp) => {
                             if (resp.error !== undefined) {
                                 console.error("Auth Error:", resp);
+                                // 自動ログイン失敗時はボタンを戻す
+                                if(actionAfterAuth === 'sync') {
+                                    const btn = document.getElementById('driveSyncBtn');
+                                    btn.innerHTML = `<i data-lucide="refresh-cw" size="18"></i><span class="hidden sm:inline">Drive同期</span>`;
+                                    if (typeof lucide !== 'undefined') lucide.createIcons();
+                                }
                                 return;
                             }
                             accessToken = resp.access_token;
-                            createPicker();
+                            executeDriveAction();
                         },
                     });
                     gisInited = true;
@@ -231,23 +276,71 @@
 
         function checkStatus() {
             if (gapiInited && gisInited) {
-                const btn = document.getElementById('driveBtn');
-                if (btn) btn.classList.remove('opacity-50');
+                document.getElementById('driveBtnGroup').classList.remove('opacity-50');
             }
         }
 
-        document.getElementById('driveBtn').onclick = () => {
+        // 「同期」または「開く」ボタン
+        document.getElementById('driveSyncBtn').onclick = () => {
             if (!isConfigValid()) {
-                alert("Google Driveと連携するには、config.js に CLIENT_ID と API_KEY を正しく設定してください。");
+                alert("Google Driveと連携するには、config.js に設定を記入してください。");
                 return;
             }
+            actionAfterAuth = currentDriveFileId ? 'sync' : 'picker';
+            
             if (!accessToken) {
-                tokenClient.requestAccessToken({prompt: 'consent'});
+                tokenClient.requestAccessToken({prompt: 'consent'}); 
             } else {
-                createPicker();
+                executeDriveAction();
             }
         };
 
+        // 「別のファイルを選択」ボタン
+        document.getElementById('drivePickerBtn').onclick = () => {
+            if (!isConfigValid()) return;
+            actionAfterAuth = 'picker';
+            if (!accessToken) {
+                tokenClient.requestAccessToken({prompt: 'consent'});
+            } else {
+                executeDriveAction();
+            }
+        };
+
+        function executeDriveAction() {
+            if (actionAfterAuth === 'picker') {
+                createPicker();
+            } else if (actionAfterAuth === 'sync') {
+                fetchDriveData(currentDriveFileId);
+            }
+        }
+
+        // Driveから直接データを取得（同期）
+        async function fetchDriveData(fileId) {
+            const btn = document.getElementById('driveSyncBtn');
+            const originalHtml = btn.innerHTML;
+            btn.innerHTML = `<i data-lucide="refresh-cw" class="animate-spin" size="18"></i><span class="hidden sm:inline">同期中...</span>`;
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+
+            try {
+                const resp = await gapi.client.drive.files.get({ fileId: fileId, alt: 'media' });
+                if (Array.isArray(resp.result)) {
+                    allMemos = resp.result;
+                    currentDriveFileId = fileId;
+                    saveCache();
+                    render();
+                }
+            } catch (e) {
+                console.error("Fetch error:", e);
+                alert("同期に失敗しました。ファイルが削除されたか権限がない可能性があります。\nフォルダアイコンから再度ファイルを選択してください。");
+                currentDriveFileId = null;
+                saveCache();
+            } finally {
+                btn.innerHTML = originalHtml;
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+            }
+        }
+
+        // Pickerでファイルを選択
         function createPicker() {
             const picker = new google.picker.PickerBuilder()
                 .addView(new google.picker.DocsView(google.picker.ViewId.DOCS).setMimeTypes('application/json'))
@@ -256,24 +349,15 @@
                 .setCallback(async (data) => {
                     if (data.action === google.picker.Action.PICKED) {
                         currentDriveFileId = data.docs[0].id; 
-                        try {
-                            const resp = await gapi.client.drive.files.get({ fileId: currentDriveFileId, alt: 'media' });
-                            if (Array.isArray(resp.result)) {
-                                allMemos = resp.result;
-                                render();
-                            } else {
-                                alert("ファイルの中身が正しい形式の旅行メモではありません。");
-                            }
-                        } catch (e) {
-                            console.error("File download error:", e);
-                            alert("ファイルの取得に失敗しました。アクセス権限を確認してください。");
-                        }
+                        saveCache(); // IDを保存
+                        fetchDriveData(currentDriveFileId); // データ取得と描画
                     }
                 })
                 .build();
             picker.setVisible(true);
         }
 
+        // ドライブのファイルを更新（上書き保存）するロジック
         async function updateDriveFile() {
             if (!currentDriveFileId || !accessToken) return false;
             const content = JSON.stringify(allMemos, null, 2);
@@ -417,7 +501,7 @@
             preview.src = '';
             preview.classList.add('hidden');
 
-            document.getElementById('deleteMemoBtn').classList.add('hidden'); // 削除ボタンを隠す
+            document.getElementById('deleteMemoBtn').classList.add('hidden'); 
 
             renderExistingTagsInModal();
 
@@ -425,19 +509,19 @@
             if (currentDriveFileId && accessToken) {
                 btn.innerHTML = `<i data-lucide="save" size="20"></i> 保存してGoogleドライブを更新`;
             } else {
-                btn.innerHTML = `<i data-lucide="save" size="20"></i> 追加 (ローカルのみ)`;
+                btn.innerHTML = `<i data-lucide="save" size="20"></i> 保存 (ローカルキャッシュ)`;
             }
             if (typeof lucide !== 'undefined') lucide.createIcons();
 
             document.getElementById('addModal').classList.remove('hidden');
         };
 
-        // --- ★既存メモの編集ロジック ---
+        // 既存メモの編集ロジック
         window.editMemo = (id) => {
             const memo = allMemos.find(m => m.id === id);
             if (!memo) return;
 
-            editingMemoId = id; // 編集モード
+            editingMemoId = id; 
             document.getElementById('modalTitle').textContent = 'メモを編集';
             
             document.getElementById('addTitle').value = memo.title || '';
@@ -455,7 +539,6 @@
                 if (memo.image.startsWith('http')) {
                     document.getElementById('addImageUrl').value = memo.image;
                 } else {
-                    // base64画像の場合はプレビューだけ表示する
                     uploadedImageDataUrl = memo.image; 
                 }
                 preview.src = memo.image;
@@ -465,7 +548,7 @@
                 preview.classList.add('hidden');
             }
 
-            document.getElementById('deleteMemoBtn').classList.remove('hidden'); // 削除ボタンを表示
+            document.getElementById('deleteMemoBtn').classList.remove('hidden'); 
 
             renderExistingTagsInModal();
 
@@ -480,11 +563,10 @@
             document.getElementById('addModal').classList.remove('hidden');
         };
 
-        // --- メモの削除ロジック ---
+        // メモの削除ロジック
         document.getElementById('deleteMemoBtn').onclick = async () => {
             if (!confirm("このメモを削除しますか？")) return;
             
-            // 削除前の状態を保持（エラー時の復元用）
             const backupMemos = [...allMemos];
             allMemos = allMemos.filter(m => m.id !== editingMemoId);
             
@@ -500,18 +582,19 @@
                 if (typeof lucide !== 'undefined') lucide.createIcons();
 
                 if (success) {
+                    saveCache();
                     document.getElementById('addModal').classList.add('hidden');
                     render();
                 } else {
-                    allMemos = backupMemos; // 失敗時は元に戻す
+                    allMemos = backupMemos; 
                 }
             } else {
+                saveCache();
                 document.getElementById('addModal').classList.add('hidden');
                 render();
             }
         };
 
-        // モーダルを閉じる
         document.getElementById('closeAddModalBtn').onclick = () => {
             document.getElementById('addModal').classList.add('hidden');
         };
@@ -545,18 +628,15 @@
                 text: text,
                 image: finalImage,
                 tags: tags,
-                // 編集時は元のタイムスタンプを維持する
                 timestamp: originalMemo ? originalMemo.timestamp : new Date().toISOString()
             };
 
             const backupMemos = [...allMemos];
 
             if (editingMemoId) {
-                // 編集（上書き）
                 const index = allMemos.findIndex(m => m.id === editingMemoId);
                 if (index !== -1) allMemos[index] = newMemo;
             } else {
-                // 新規追加
                 allMemos.unshift(newMemo);
             }
             
@@ -574,12 +654,15 @@
                 if (typeof lucide !== 'undefined') lucide.createIcons();
 
                 if (success) {
+                    saveCache();
                     document.getElementById('addModal').classList.add('hidden');
                     render(); 
                 } else {
-                    allMemos = backupMemos; // 失敗時は元に戻す
+                    allMemos = backupMemos; 
                 }
             } else {
+                // ローカルのみの場合もキャッシュに保存
+                saveCache();
                 document.getElementById('addModal').classList.add('hidden');
                 render();
             }
@@ -674,6 +757,7 @@
                     if (Array.isArray(data)) { 
                         allMemos = data; 
                         currentDriveFileId = null; 
+                        saveCache(); // ローカルファイルもキャッシュ
                         render(); 
                     }
                 } catch (err) { alert("JSON形式が正しくありません。"); }
@@ -690,7 +774,9 @@
             lb.classList.remove('hidden');
         };
 
+        // 起動時の処理
         window.addEventListener('load', () => {
+            loadCache(); // キャッシュを読み込んで即座に表示
             tryInitGoogleApi();
             if (typeof lucide !== 'undefined') lucide.createIcons();
         });
