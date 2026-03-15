@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Travel Scrapper</title>
     
-    <!-- ★ タブのアイコン (SVGをデータURLで埋め込み) -->
+    <!-- タブのアイコン (SVG) -->
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2003/svg' viewBox='0 0 24 24' fill='none' stroke='%232563eb' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M17.8 19.2L16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z'/></svg>">
 
     <!-- Tailwind CSS -->
@@ -21,7 +21,7 @@
     <script async defer src="https://accounts.google.com/gsi/client"></script>
 
     <!-- 分離した設定ファイル(config.js)の読み込み -->
-    <script src="config.js" onerror="console.warn('config.js が見つかりません。ローカル動作モードで起動します。')"></script>
+    <script src="config.js" onerror="console.warn('config.js が見つかりません。')"></script>
 
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&display=swap');
@@ -54,16 +54,14 @@
     <!-- ナビゲーションバー -->
     <nav class="bg-white/90 backdrop-blur-md border-b border-slate-200 sticky top-0 z-40 shadow-sm">
         <div class="max-w-6xl mx-auto px-4 py-3">
-            <!-- 一段目: ロゴとメインアクション -->
             <div class="flex justify-between items-center mb-4">
                 <div class="flex items-center gap-3">
-                    <!-- ★ 飛行機アイコンに変更 -->
                     <div class="w-11 h-11 bg-blue-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-blue-200 rotate-[-10deg]">
                         <i data-lucide="send" size="26"></i>
                     </div>
                     <div>
                         <h1 class="text-lg font-black text-slate-800 tracking-tight leading-none mb-1">Travel Scrapper</h1>
-                        <p class="text-[10px] text-blue-600 font-bold uppercase tracking-[0.2em]">Web Viewer v1.5.7</p>
+                        <p class="text-[10px] text-blue-600 font-bold uppercase tracking-[0.2em]">Web Viewer v1.6.2</p>
                     </div>
                 </div>
 
@@ -73,25 +71,22 @@
                 </button>
             </div>
 
-            <!-- 二段目: サブアクションを日本語ラベル付きで整理 -->
             <div class="flex flex-wrap items-center gap-2">
-                <!-- ファイル操作グループ -->
                 <div class="flex items-center gap-1 p-1 bg-slate-50 rounded-xl border border-slate-100">
-                    <button id="drivePickerBtn" class="flex items-center gap-1.5 px-3 py-2 text-green-700 font-bold text-xs hover:bg-white rounded-lg transition-colors" title="Googleドライブからファイルを選択">
+                    <button id="drivePickerBtn" class="flex items-center gap-1.5 px-3 py-2 text-green-700 font-bold text-xs hover:bg-white rounded-lg transition-colors">
                         <i data-lucide="folder-open" size="16"></i>
                         <span>ファイル選択</span>
                     </button>
                     <div class="w-px h-4 bg-slate-200"></div>
-                    <label class="flex items-center gap-1.5 px-3 py-2 text-slate-600 font-bold text-xs hover:bg-white rounded-lg transition-colors cursor-pointer" title="ローカルのJSONを読み込む">
+                    <label for="fileInput" class="flex items-center gap-1.5 px-3 py-2 text-slate-600 font-bold text-xs hover:bg-white rounded-lg transition-colors cursor-pointer">
                         <i data-lucide="file-up" size="16"></i>
                         <span>ローカル読込</span>
-                        <input type="file" id="fileInput" accept=".json" class="hidden" />
                     </label>
+                    <input type="file" id="fileInput" accept=".json" class="hidden" />
                 </div>
 
                 <div class="flex-1"></div>
 
-                <!-- メンテナンスグループ -->
                 <div class="flex items-center gap-1">
                     <button id="logoutBtn" class="hidden items-center gap-1.5 px-3 py-2 text-red-600 font-bold text-xs hover:bg-red-50 rounded-lg transition-colors">
                         <i data-lucide="log-out" size="16"></i>
@@ -106,76 +101,74 @@
         </div>
     </nav>
 
-    <!-- 検索とタグフィルター -->
+    <!-- 検索とタグ -->
     <div class="max-w-6xl mx-auto px-4 mt-6">
         <div class="bg-white p-4 md:p-6 rounded-3xl border border-slate-200 shadow-sm flex flex-col gap-4">
             <div class="relative">
                 <i data-lucide="search" class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size="20"></i>
-                <input 
-                    type="text" 
-                    id="searchInput"
-                    placeholder="場所や内容で検索..."
-                    class="w-full pl-12 pr-4 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all text-base shadow-inner"
-                />
+                <input type="text" id="searchInput" placeholder="場所を検索..." class="w-full pl-12 pr-4 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-4 focus:ring-blue-500/10 outline-none transition-all text-base shadow-inner" />
             </div>
             <div id="tagList" class="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
                 <i data-lucide="tag" class="text-slate-400 shrink-0" size="16"></i>
-                <button class="tag-chip px-5 py-2 rounded-full text-xs font-bold whitespace-nowrap transition-all bg-blue-600 text-white shadow-md shadow-blue-200" data-tag="all">すべて</button>
+                <button class="tag-chip px-5 py-2 rounded-full text-xs font-bold whitespace-nowrap transition-all bg-blue-600 text-white" data-tag="all">すべて</button>
             </div>
         </div>
     </div>
 
-    <!-- メモ表示エリア -->
+    <!-- メイン表示エリア -->
     <main id="memoContainer" class="max-w-6xl mx-auto px-4 mt-8 memo-grid">
         <div class="col-span-full py-32 flex flex-col items-center text-center px-10">
             <div class="w-20 h-20 bg-blue-50 text-blue-300 rounded-3xl flex items-center justify-center mb-6">
                 <i data-lucide="plane" size="40"></i>
             </div>
             <h2 class="text-xl font-bold text-slate-700 tracking-tight">データがありません</h2>
-            <p class="text-slate-400 text-sm mt-2 max-w-xs">右上の同期ボタンからデータを読み込んで、次の旅の計画を立てましょう！</p>
+            <p class="text-slate-400 text-sm mt-2 max-w-xs">右上の同期ボタンからデータを読み込むか、＋ボタンから新しく追加してください。</p>
         </div>
     </main>
 
-    <!-- フローティングアクションボタン (メモ追加) -->
+    <!-- 追加ボタン -->
     <button id="fabAdd" class="fixed bottom-6 right-6 w-14 h-14 bg-blue-600 text-white rounded-full shadow-lg shadow-blue-300 flex items-center justify-center hover:bg-blue-700 active:scale-90 transition-transform z-50">
         <i data-lucide="plus" size="28"></i>
     </button>
 
-    <!-- モーダル -->
+    <!-- 追加・編集モーダル -->
     <div id="addModal" class="fixed inset-0 z-[60] hidden flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
         <div class="bg-white w-full max-w-md rounded-[2.5rem] p-6 shadow-2xl modal-enter max-h-[90vh] overflow-y-auto no-scrollbar">
             <div class="flex justify-between items-center mb-6">
-                <h2 id="modalTitle" class="text-xl font-black text-slate-800">場所を編集</h2>
-                <button id="closeAddModalBtn" class="text-slate-400 hover:text-slate-600 transition-colors"><i data-lucide="x" size="24"></i></button>
+                <h2 id="modalTitle" class="text-xl font-black text-slate-800 tracking-tight">場所を追加</h2>
+                <button id="closeAddModalBtn" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" size="24"></i></button>
             </div>
-            
             <div class="space-y-4">
-                <!-- 各フィールドとクリアボタン -->
                 <div>
                     <label class="block text-xs font-black text-slate-500 mb-1.5 ml-1 uppercase tracking-widest">タイトル *</label>
                     <div class="relative">
-                        <input type="text" id="addTitle" class="w-full pl-4 pr-10 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none" placeholder="例：絶景スポット">
-                        <button type="button" id="clear_addTitle" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500 hidden">
-                            <i data-lucide="x-circle" size="20"></i>
-                        </button>
+                        <input type="text" id="addTitle" class="w-full pl-4 pr-10 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none" placeholder="例：東京駅">
+                        <button type="button" id="clear_addTitle" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300 hidden"><i data-lucide="x-circle" size="20"></i></button>
                     </div>
                 </div>
-                <div>
-                    <label class="block text-xs font-black text-slate-500 mb-1.5 ml-1 uppercase tracking-widest">URL</label>
-                    <div class="relative">
-                        <input type="url" id="addUrl" class="w-full pl-4 pr-10 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none" placeholder="https://...">
-                        <button type="button" id="clear_addUrl" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500 hidden">
-                            <i data-lucide="x-circle" size="20"></i>
-                        </button>
+                
+                <div class="grid grid-cols-1 gap-4">
+                    <div>
+                        <label class="block text-[10px] font-black text-slate-500 mb-1.5 ml-1 uppercase tracking-widest">公式サイトURL (任意)</label>
+                        <div class="relative">
+                            <input type="url" id="addUrl" class="w-full pl-4 pr-10 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none text-sm" placeholder="https://...">
+                            <button type="button" id="clear_addUrl" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300 hidden"><i data-lucide="x-circle" size="18"></i></button>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-black text-blue-600 mb-1.5 ml-1 uppercase tracking-widest flex items-center gap-1"><i data-lucide="map-pin" size="12"></i> Googleマップ (自動入力)</label>
+                        <div class="relative">
+                            <input type="url" id="addMapUrl" class="w-full pl-4 pr-10 py-3 bg-blue-50/50 border border-blue-100 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none text-sm text-blue-800" placeholder="タイトルから自動生成されます">
+                            <button type="button" id="clear_addMapUrl" class="absolute right-3 top-1/2 -translate-y-1/2 text-blue-300 hidden"><i data-lucide="x-circle" size="18"></i></button>
+                        </div>
                     </div>
                 </div>
+
                 <div>
                     <label class="block text-xs font-black text-slate-500 mb-1.5 ml-1 uppercase tracking-widest">メモ</label>
                     <div class="relative">
-                        <textarea id="addText" rows="3" class="w-full pl-4 pr-10 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none resize-none leading-relaxed" placeholder="ここに行きたい理由など"></textarea>
-                        <button type="button" id="clear_addText" class="absolute right-3 top-4 text-slate-300 hover:text-slate-500 hidden">
-                            <i data-lucide="x-circle" size="20"></i>
-                        </button>
+                        <textarea id="addText" rows="2" class="w-full pl-4 pr-10 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none resize-none leading-relaxed text-sm" placeholder="見どころなど"></textarea>
+                        <button type="button" id="clear_addText" class="absolute right-3 top-4 text-slate-300 hidden"><i data-lucide="x-circle" size="20"></i></button>
                     </div>
                 </div>
                 
@@ -183,23 +176,19 @@
                     <label class="block text-xs font-black text-slate-500 mb-1.5 ml-1 uppercase tracking-widest">画像</label>
                     <div class="space-y-3">
                         <div class="relative">
-                            <input type="url" id="addImageUrl" class="w-full pl-4 pr-10 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none" placeholder="画像のURLを入力">
-                            <button type="button" id="clear_addImageUrl" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500 hidden">
-                                <i data-lucide="x-circle" size="20"></i>
-                            </button>
+                            <input type="url" id="addImageUrl" class="w-full pl-4 pr-10 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none text-sm" placeholder="URLを入力">
+                            <button type="button" id="clear_addImageUrl" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300 hidden"><i data-lucide="x-circle" size="20"></i></button>
                         </div>
                         <div class="flex items-center gap-3 pl-1">
                             <span class="text-[10px] font-bold text-slate-300 uppercase">Or</span>
-                            <label class="flex items-center gap-2 px-4 py-2 bg-white text-slate-600 rounded-xl cursor-pointer hover:bg-slate-50 border border-slate-200 text-xs font-bold transition-colors shadow-sm">
+                            <label class="flex items-center gap-2 px-4 py-2 bg-white text-slate-600 rounded-xl cursor-pointer hover:bg-slate-50 border border-slate-200 text-xs font-bold transition-colors">
                                 <i data-lucide="image-plus" size="16"></i> ファイルを選択
                                 <input type="file" id="addImageFile" accept="image/*" class="hidden">
                             </label>
                         </div>
-                        <div id="previewContainer" class="relative hidden group">
-                            <img id="imagePreview" src="" class="w-full h-40 object-cover rounded-2xl border border-slate-200 shadow-sm transition-opacity group-hover:opacity-90">
-                            <button type="button" id="clearPreviewBtn" class="absolute top-2 right-2 p-1.5 bg-slate-900/60 text-white rounded-full backdrop-blur-sm shadow-lg hover:bg-slate-900/80 transition-all">
-                                <i data-lucide="x" size="16"></i>
-                            </button>
+                        <div id="previewContainer" class="relative hidden">
+                            <img id="imagePreview" src="" class="w-full h-40 object-cover rounded-2xl border border-slate-200 shadow-sm">
+                            <button type="button" id="clearPreviewBtn" class="absolute top-2 right-2 p-1.5 bg-slate-900/60 text-white rounded-full backdrop-blur-sm"><i data-lucide="x" size="16"></i></button>
                         </div>
                     </div>
                 </div>
@@ -207,22 +196,15 @@
                 <div>
                     <label class="block text-xs font-black text-slate-500 mb-1.5 ml-1 uppercase tracking-widest">タグ</label>
                     <div class="relative mb-2">
-                        <input type="text" id="addTags" class="w-full pl-4 pr-10 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none" placeholder="カフェ, 絶景 (カンマ区切り)">
-                        <button type="button" id="clear_addTags" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500 hidden">
-                            <i data-lucide="x-circle" size="20"></i>
-                        </button>
+                        <input type="text" id="addTags" class="w-full pl-4 pr-10 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none text-sm" placeholder="カフェ, グルメなど">
+                        <button type="button" id="clear_addTags" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300 hidden"><i data-lucide="x-circle" size="20"></i></button>
                     </div>
                     <div id="existingTagsContainer" class="flex flex-wrap gap-2 pl-1"></div>
                 </div>
-                
+
                 <div class="flex gap-3 pt-4">
-                    <button id="deleteMemoBtn" type="button" class="hidden px-5 py-4 bg-red-50 text-red-500 rounded-2xl font-bold flex items-center justify-center hover:bg-red-100 transition-colors">
-                        <i data-lucide="trash-2" size="20"></i>
-                    </button>
-                    <button id="saveNewMemoBtn" type="button" class="flex-1 py-4 bg-blue-600 text-white rounded-2xl font-black flex items-center justify-center gap-2 hover:bg-blue-700 shadow-lg shadow-blue-100 active:scale-95 transition-all disabled:bg-slate-300">
-                        <i data-lucide="save" size="20"></i>
-                        <span id="saveBtnText">保存する</span>
-                    </button>
+                    <button id="deleteMemoBtn" type="button" class="hidden px-5 py-4 bg-red-50 text-red-500 rounded-2xl font-bold hover:bg-red-100 transition-colors"><i data-lucide="trash-2" size="20"></i></button>
+                    <button id="saveNewMemoBtn" type="button" class="flex-1 py-4 bg-blue-600 text-white rounded-2xl font-black flex items-center justify-center gap-2 hover:bg-blue-700 active:scale-95 transition-all shadow-lg shadow-blue-100"><i data-lucide="save" size="20"></i><span id="saveBtnText">保存する</span></button>
                 </div>
             </div>
         </div>
@@ -230,7 +212,7 @@
 
     <!-- ライトボックス -->
     <div id="lightbox" class="fixed inset-0 z-[100] hidden bg-black/95 flex items-center justify-center p-4 cursor-zoom-out" onclick="this.classList.add('hidden')">
-        <img id="lightboxImg" src="" class="max-w-full max-h-full rounded shadow-2xl transition-transform duration-300" />
+        <img id="lightboxImg" src="" class="max-w-full max-h-full rounded shadow-2xl" />
     </div>
 
     <script>
@@ -242,303 +224,106 @@
         let uploadedImageDataUrl = ''; 
         let editingMemoId = null;
 
-        const CONFIG_READY = typeof CONFIG !== 'undefined' && CONFIG.CLIENT_ID && CONFIG.API_KEY && !CONFIG.CLIENT_ID.includes('YOUR_');
-        const CLIENT_ID = CONFIG?.CLIENT_ID || '';
-        const API_KEY = CONFIG?.API_KEY || '';
+        const CONFIG_READY = (typeof CONFIG !== 'undefined' && CONFIG.CLIENT_ID && !CONFIG.CLIENT_ID.includes('YOUR_'));
+        const CLIENT_ID = CONFIG_READY ? CONFIG.CLIENT_ID : '';
+        const API_KEY = CONFIG_READY ? CONFIG.API_KEY : '';
         const DISCOVERY_DOCS = ["https://www.googleapis.com/discovery/v1/apis/drive/v3/rest"];
         const SCOPES = "https://www.googleapis.com/auth/drive";
 
         let tokenClient, accessToken = null, gapiInited = false, gisInited = false, actionAfterAuth = null;
 
-        // --- トークン管理 ---
-        async function ensureAccessToken() {
-            await loadToken();
-            if (!accessToken) {
-                return new Promise((resolve) => {
-                    actionAfterAuth = 'internal_refresh';
-                    tokenClient.callback = async (resp) => {
-                        if (resp.error) { resolve(null); return; }
+        // --- 初期設定 ---
+        function initLocalEvents() {
+            document.getElementById('fabAdd').onclick = openAddModal;
+            document.getElementById('fileInput').onchange = (e) => {
+                const file = e.target.files[0]; if (!file) return;
+                const reader = new FileReader();
+                reader.onload = async (ev) => {
+                    try {
+                        const data = JSON.parse(ev.target.result);
+                        if (Array.isArray(data)) {
+                            allMemos = data; currentDriveFileId = null;
+                            await saveCache(); render();
+                        }
+                    } catch (err) { alert("JSON読み込み失敗"); }
+                };
+                reader.readAsText(file);
+            };
+            document.getElementById('searchInput').oninput = (e) => { searchQuery = e.target.value; render(); };
+            document.querySelector('[data-tag="all"]').onclick = () => { currentTag = 'all'; render(); };
+            document.getElementById('closeAddModalBtn').onclick = () => document.getElementById('addModal').classList.add('hidden');
+            setupInputClearButtons();
+            document.getElementById('saveNewMemoBtn').onclick = saveMemo;
+            document.getElementById('deleteMemoBtn').onclick = deleteMemo;
+            document.getElementById('clearDataBtn').onclick = clearAllLocalData;
+            setupImageHandlers();
+        }
+
+        async function initGoogleDrive() {
+            if (!CONFIG_READY) return;
+            try {
+                gapi.load('client:picker', async () => {
+                    await gapi.client.init({ apiKey: API_KEY, discoveryDocs: DISCOVERY_DOCS });
+                    gapiInited = true; checkSyncStatus();
+                });
+                tokenClient = google.accounts.oauth2.initTokenClient({
+                    client_id: CLIENT_ID, scope: SCOPES,
+                    callback: async (resp) => {
+                        if (resp.error) { resetSyncIcon(); return; }
                         await saveToken(resp.access_token);
-                        resolve(resp.access_token);
-                    };
-                    tokenClient.requestAccessToken({prompt: ''});
+                        if (actionAfterAuth === 'picker') createPicker();
+                        else if (actionAfterAuth === 'sync') fetchDriveData(currentDriveFileId);
+                    },
                 });
-            }
-            return accessToken;
+                gisInited = true; checkSyncStatus();
+            } catch (e) { console.error(e); }
         }
 
-        async function logout() {
-            if(!confirm("ログアウトしますか？")) return;
-            await idbKeyval.del('gapi_access_token');
-            await idbKeyval.del('gapi_token_expiry');
-            accessToken = null; location.reload(); 
-        }
-        document.getElementById('logoutBtn').onclick = logout;
-
-        async function clearAllData() {
-            if(!confirm("全てのデータを初期化しますか？\n(Googleドライブ上のファイルは安全です)")) return;
-            allMemos = []; currentDriveFileId = null;
-            await idbKeyval.del('travelMemos_cache');
-            await idbKeyval.del('driveFileId_cache');
-            render(); updateDriveButtonState();
-        }
-        document.getElementById('clearDataBtn').onclick = clearAllData;
-
-        async function loadToken() {
-            const saved = await idbKeyval.get('gapi_access_token');
-            const expiry = await idbKeyval.get('gapi_token_expiry');
-            if (saved && expiry && Date.now() < parseInt(expiry)) accessToken = saved;
-            else accessToken = null;
+        function checkSyncStatus() {
+            if (gapiInited && gisInited) updateDriveUI();
         }
 
-        async function saveToken(token) {
-            accessToken = token;
-            await idbKeyval.set('gapi_access_token', token);
-            await idbKeyval.set('gapi_token_expiry', Date.now() + 3550 * 1000); 
-            updateDriveButtonState();
+        // --- モーダル制御 ---
+        function openAddModal() {
+            editingMemoId = null;
+            document.getElementById('modalTitle').textContent = '新しく追加';
+            document.getElementById('saveBtnText').textContent = '追加する';
+            document.getElementById('addTitle').value = ''; 
+            document.getElementById('addUrl').value = '';
+            document.getElementById('addMapUrl').value = '';
+            document.getElementById('addText').value = ''; 
+            document.getElementById('addTags').value = '';
+            document.getElementById('addImageUrl').value = ''; 
+            uploadedImageDataUrl = '';
+            document.getElementById('previewContainer').classList.add('hidden');
+            document.getElementById('deleteMemoBtn').classList.add('hidden'); 
+            renderTagHints();
+            document.getElementById('addModal').classList.remove('hidden');
+            refreshClearBtnVisibility();
         }
 
-        async function loadCache() {
-            const cachedMemos = await idbKeyval.get('travelMemos_cache');
-            if (cachedMemos) allMemos = cachedMemos;
-            currentDriveFileId = await idbKeyval.get('driveFileId_cache');
-            updateDriveButtonState();
-            if (allMemos.length > 0) render();
-        }
-
-        async function saveCache() {
-            await idbKeyval.set('travelMemos_cache', allMemos);
-            if (currentDriveFileId) await idbKeyval.set('driveFileId_cache', currentDriveFileId);
-            else await idbKeyval.del('driveFileId_cache');
-            updateDriveButtonState();
-        }
-
-        function updateDriveButtonState() {
-            const syncText = document.getElementById('driveSyncText');
-            const logoutBtn = document.getElementById('logoutBtn');
-            if (syncText) syncText.textContent = currentDriveFileId ? "Drive同期" : "Driveを開く";
-            if (logoutBtn) logoutBtn.classList.toggle('hidden', !accessToken);
-        }
-
-        // --- Google API ---
-        async function tryInitGoogleApi() {
-            if (!CONFIG_READY) return;
-            gapi.load('client:picker', async () => {
-                await gapi.client.init({ apiKey: API_KEY, discoveryDocs: DISCOVERY_DOCS });
-                gapiInited = true; checkStatus();
-            });
-            tokenClient = google.accounts.oauth2.initTokenClient({
-                client_id: CLIENT_ID, scope: SCOPES,
-                callback: async (resp) => {
-                    if (resp.error) { resetSyncButton(); return; }
-                    await saveToken(resp.access_token);
-                    if (actionAfterAuth === 'picker') createPicker();
-                    else if (actionAfterAuth === 'sync') fetchDriveData(currentDriveFileId);
-                },
-            });
-            gisInited = true; checkStatus();
-        }
-
-        function checkStatus() {
-            if (gapiInited && gisInited) updateDriveButtonState();
-        }
-
-        function resetSyncButton() {
-            const btnText = document.getElementById('driveSyncText');
-            if (btnText) btnText.textContent = currentDriveFileId ? "Drive同期" : "Driveを開く";
-            const icon = document.querySelector('#driveSyncBtn i');
-            if (icon) icon.classList.remove('animate-spin');
-        }
-
-        document.getElementById('driveSyncBtn').onclick = async () => {
-            if (!CONFIG_READY) return alert("設定が未完了です。");
-            actionAfterAuth = currentDriveFileId ? 'sync' : 'picker';
-            await loadToken();
-            if (!accessToken) tokenClient.requestAccessToken({prompt: 'consent'});
-            else executeDriveAction();
-        };
-
-        document.getElementById('drivePickerBtn').onclick = async () => {
-            if (!CONFIG_READY) return;
-            actionAfterAuth = 'picker';
-            await loadToken();
-            if (!accessToken) tokenClient.requestAccessToken({prompt: 'consent'});
-            else executeDriveAction();
-        };
-
-        function executeDriveAction() {
-            if (actionAfterAuth === 'picker') createPicker();
-            else if (actionAfterAuth === 'sync') fetchDriveData(currentDriveFileId);
-        }
-
-        function createPicker() {
-            const picker = new google.picker.PickerBuilder()
-                .addView(new google.picker.DocsView(google.picker.ViewId.DOCS).setMimeTypes('application/json'))
-                .setOAuthToken(accessToken).setDeveloperKey(API_KEY)
-                .setCallback(async (data) => {
-                    if (data.action === google.picker.Action.PICKED) {
-                        currentDriveFileId = data.docs[0].id; 
-                        await saveCache(); fetchDriveData(currentDriveFileId); 
-                    }
-                }).build();
-            picker.setVisible(true);
-        }
-
-        async function fetchDriveData(fileId) {
-            const btnText = document.getElementById('driveSyncText');
-            if (btnText) btnText.textContent = "同期中...";
-            const icon = document.querySelector('#driveSyncBtn i');
-            if (icon) icon.classList.add('animate-spin');
-            
-            try {
-                if (gapi.client) gapi.client.setToken({ access_token: accessToken });
-                const resp = await gapi.client.drive.files.get({ fileId: fileId, alt: 'media' });
-                let data = resp.result;
-                if (typeof data === 'string') data = JSON.parse(data);
-                if (Array.isArray(data)) {
-                    allMemos = data; currentDriveFileId = fileId;
-                    await saveCache(); render();
-                }
-            } catch (e) {
-                if (e.status === 401 || e.status === 403) {
-                    accessToken = null; await idbKeyval.del('gapi_access_token');
-                    alert("ログイン期限が切れました。再度同期してください。");
-                }
-            } finally { resetSyncButton(); }
-        }
-
-        async function updateDriveFile() {
-            const token = await ensureAccessToken();
-            if (!token) return false;
-            try {
-                if (gapi.client) gapi.client.setToken({ access_token: token });
-                const request = gapi.client.request({
-                    path: '/upload/drive/v3/files/' + currentDriveFileId,
-                    method: 'PATCH', params: { uploadType: 'media' }, body: JSON.stringify(allMemos, null, 2)
-                });
-                await new Promise((resolve, reject) => request.execute(r => r && r.error ? reject(r.error) : resolve(r)));
-                return true;
-            } catch (err) {
-                if (err.code === 401 || err.code === 403) { accessToken = null; idbKeyval.del('gapi_access_token'); }
-                return false;
-            }
-        }
-
-        // --- 画面操作 ---
-        function setupClearButtons() {
-            ['addTitle', 'addUrl', 'addText', 'addImageUrl', 'addTags'].forEach(id => {
+        function setupInputClearButtons() {
+            ['addTitle', 'addUrl', 'addMapUrl', 'addText', 'addImageUrl', 'addTags'].forEach(id => {
                 const input = document.getElementById(id);
                 const btn = document.getElementById(`clear_${id}`);
                 if (!input || !btn) return;
-                input.oninput = () => btn.classList.toggle('hidden', input.value.length === 0);
-                btn.onclick = () => { input.value = ''; btn.classList.add('hidden'); input.focus(); updateTagChipStyles(); };
-            });
-        }
-
-        document.getElementById('addImageFile').onchange = (e) => {
-            const file = e.target.files[0]; if (!file) return;
-            const reader = new FileReader();
-            reader.onload = (ev) => {
-                const img = new Image();
-                img.onload = () => {
-                    const canvas = document.createElement('canvas');
-                    const MAX = 800; let w = img.width, h = img.height;
-                    if (w > h && w > MAX) { h *= MAX/w; w = MAX; } else if (h > MAX) { w *= MAX/h; h = MAX; }
-                    canvas.width = w; canvas.height = h;
-                    canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-                    uploadedImageDataUrl = canvas.toDataURL('image/jpeg', 0.8);
-                    document.getElementById('imagePreview').src = uploadedImageDataUrl;
-                    document.getElementById('previewContainer').classList.remove('hidden');
-                    document.getElementById('addImageUrl').value = '';
-                    document.getElementById('clear_addImageUrl').classList.add('hidden');
+                input.oninput = () => {
+                    btn.classList.toggle('hidden', input.value.length === 0);
+                    // タイトル入力時にマップを自動生成
+                    if (id === 'addTitle') {
+                        const titleVal = input.value.trim();
+                        const mapInput = document.getElementById('addMapUrl');
+                        if (titleVal) {
+                            mapInput.value = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(titleVal)}`;
+                            document.getElementById('clear_addMapUrl').classList.remove('hidden');
+                        }
+                    }
                 };
-                img.src = ev.target.result;
-            };
-            reader.readAsDataURL(file);
-        };
-
-        document.getElementById('clearPreviewBtn').onclick = () => {
-            uploadedImageDataUrl = ''; document.getElementById('previewContainer').classList.add('hidden');
-            document.getElementById('imagePreview').src = '';
-            document.getElementById('addImageUrl').value = '';
-            document.getElementById('clear_addImageUrl').classList.add('hidden');
-        };
-
-        function updateTagChipStyles() {
-            const input = document.getElementById('addTags');
-            if(!input) return;
-            const cur = input.value.split(',').map(t => t.trim());
-            document.querySelectorAll('#existingTagsContainer button').forEach(btn => {
-                const tag = btn.textContent.replace('#', '');
-                if (cur.includes(tag)) {
-                    btn.classList.remove('bg-slate-100', 'text-slate-500');
-                    btn.classList.add('bg-blue-100', 'text-blue-600', 'border-blue-300');
-                } else {
-                    btn.classList.remove('bg-blue-100', 'text-blue-600', 'border-blue-300');
-                    btn.classList.add('bg-slate-100', 'text-slate-500');
-                }
+                btn.onclick = () => { input.value = ''; btn.classList.add('hidden'); input.focus(); if(id==='addTags') refreshTagHintStyles(); };
             });
         }
 
-        function renderExistingTagsInModal() {
-            const container = document.getElementById('existingTagsContainer');
-            container.innerHTML = '';
-            const tags = new Set(); allMemos.forEach(m => (m.tags || []).forEach(t => tags.add(t)));
-            Array.from(tags).sort().forEach(tag => {
-                const btn = document.createElement('button');
-                btn.className = 'px-3 py-1 bg-slate-100 text-slate-500 text-[10px] rounded-xl font-black border border-slate-200 transition-colors';
-                btn.textContent = '#' + tag;
-                btn.onclick = () => {
-                    const input = document.getElementById('addTags');
-                    let cur = input.value.split(',').map(t => t.trim()).filter(t => t);
-                    if (cur.includes(tag)) cur = cur.filter(t => t !== tag); else cur.push(tag);
-                    input.value = cur.join(', '); updateTagChipStyles();
-                    document.getElementById('clear_addTags').classList.toggle('hidden', !input.value);
-                };
-                container.appendChild(btn);
-            });
-            updateTagChipStyles();
-        }
-
-        document.getElementById('fabAdd').onclick = () => {
-            editingMemoId = null; document.getElementById('modalTitle').textContent = '新しく追加';
-            document.getElementById('saveBtnText').textContent = '追加する';
-            document.getElementById('addTitle').value = ''; document.getElementById('addUrl').value = '';
-            document.getElementById('addText').value = ''; document.getElementById('addTags').value = '';
-            document.getElementById('addImageUrl').value = ''; uploadedImageDataUrl = '';
-            document.getElementById('previewContainer').classList.add('hidden');
-            document.getElementById('deleteMemoBtn').classList.add('hidden'); 
-            renderExistingTagsInModal(); document.getElementById('addModal').classList.remove('hidden');
-            ['clear_addTitle','clear_addUrl','clear_addText','clear_addImageUrl','clear_addTags'].forEach(id=>document.getElementById(id).classList.add('hidden'));
-        };
-
-        window.editMemo = (id) => {
-            const memo = allMemos.find(m => m.id === id); if (!memo) return;
-            editingMemoId = id; document.getElementById('modalTitle').textContent = 'メモを編集';
-            document.getElementById('saveBtnText').textContent = '上書き保存';
-            document.getElementById('addTitle').value = memo.title || '';
-            document.getElementById('addUrl').value = memo.url || '';
-            document.getElementById('addText').value = memo.text || '';
-            document.getElementById('addTags').value = (memo.tags || []).join(', ');
-            
-            uploadedImageDataUrl = '';
-            if (memo.image) {
-                document.getElementById('imagePreview').src = memo.image;
-                document.getElementById('previewContainer').classList.remove('hidden');
-                if (memo.image.startsWith('data:')) uploadedImageDataUrl = memo.image;
-                else document.getElementById('addImageUrl').value = memo.image;
-            } else { 
-                document.getElementById('previewContainer').classList.add('hidden'); 
-            }
-            document.getElementById('deleteMemoBtn').classList.remove('hidden'); 
-            renderExistingTagsInModal(); document.getElementById('addModal').classList.remove('hidden');
-            ['addTitle','addUrl','addText','addImageUrl','addTags'].forEach(id=>{
-                const input = document.getElementById(id);
-                document.getElementById('clear_'+id).classList.toggle('hidden', !input.value);
-            });
-        };
-
-        document.getElementById('saveNewMemoBtn').onclick = async () => {
+        async function saveMemo() {
             const titleInput = document.getElementById('addTitle');
             const title = titleInput.value.trim();
             if (!title) { titleInput.focus(); return; }
@@ -546,14 +331,15 @@
             const btn = document.getElementById('saveNewMemoBtn');
             btn.disabled = true; document.getElementById('saveBtnText').textContent = '保存中...';
 
-            const image = document.getElementById('previewContainer').classList.contains('hidden') 
-                        ? null 
-                        : (uploadedImageDataUrl || document.getElementById('addImageUrl').value.trim());
+            const image = !document.getElementById('previewContainer').classList.contains('hidden') 
+                        ? (uploadedImageDataUrl || document.getElementById('addImageUrl').value.trim()) : null;
 
             const newMemo = {
                 id: editingMemoId || "m-" + Date.now(),
+                title: title,
                 url: document.getElementById('addUrl').value.trim(),
-                title: title, text: document.getElementById('addText').value.trim(),
+                mapUrl: document.getElementById('addMapUrl').value.trim(),
+                text: document.getElementById('addText').value.trim(),
                 image: image,
                 tags: document.getElementById('addTags').value.split(',').map(t => t.trim()).filter(t => t),
                 timestamp: new Date().toISOString()
@@ -561,35 +347,21 @@
 
             const oldMemos = [...allMemos];
             if (editingMemoId) {
-                const idx = allMemos.findIndex(m => m.id === editingMemoId);
-                allMemos[idx] = newMemo;
+                allMemos[allMemos.findIndex(m => m.id === editingMemoId)] = newMemo;
             } else { allMemos.unshift(newMemo); }
             
             let success = true;
-            if (currentDriveFileId) success = await updateDriveFile();
+            if (currentDriveFileId) success = await uploadToDrive();
 
             if (success) {
-                await saveCache(); document.getElementById('addModal').classList.add('hidden');
+                await saveCache(); 
+                document.getElementById('addModal').classList.add('hidden');
                 render();
-            } else {
-                allMemos = oldMemos;
-                alert("Driveへの保存に失敗しました。");
-            }
+            } else { allMemos = oldMemos; alert("Drive同期失敗"); }
             btn.disabled = false; document.getElementById('saveBtnText').textContent = editingMemoId ? '上書き保存' : '追加する';
-        };
+        }
 
-        document.getElementById('deleteMemoBtn').onclick = async () => {
-            if (!confirm("このメモを削除しますか？")) return;
-            const old = [...allMemos];
-            allMemos = allMemos.filter(m => m.id !== editingMemoId);
-            let success = true;
-            if (currentDriveFileId) success = await updateDriveFile();
-            if (success) {
-                await saveCache(); document.getElementById('addModal').classList.add('hidden');
-                render();
-            } else { allMemos = old; alert("削除に失敗しました。"); }
-        };
-
+        // --- メインレンダリング (確実な遷移のために window.open を使用) ---
         function render() {
             const container = document.getElementById('memoContainer');
             const filtered = allMemos.filter(m => {
@@ -605,7 +377,7 @@
                             <i data-lucide="plane" size="40"></i>
                         </div>
                         <h2 class="text-xl font-bold text-slate-700 tracking-tight">データがありません</h2>
-                        <p class="text-slate-400 text-sm mt-2 max-w-xs">右上の同期ボタンからデータを読み込んで、次の旅の計画を立てましょう！</p>
+                        <p class="text-slate-400 text-sm mt-2 max-w-xs">右上の同期ボタンからデータを読み込むか、＋ボタンから追加しましょう！</p>
                     </div>`;
                 if (typeof lucide !== 'undefined') lucide.createIcons();
                 return;
@@ -616,16 +388,24 @@
                     ${m.image ? `<img src="${m.image}" class="w-full h-auto cursor-zoom-in block" onclick="openLightbox('${m.image}')" loading="lazy">` : ''}
                     <div class="p-5 flex-1 flex flex-col">
                         <h3 class="font-black text-slate-800 mb-3 text-base leading-snug">${m.title}</h3>
-                        ${m.text ? `<div class="bg-blue-50/50 text-blue-900 text-[13px] p-4 rounded-2xl italic mb-4 whitespace-pre-wrap leading-relaxed shadow-inner">${m.text}</div>` : ''}
-                        <div class="flex flex-wrap gap-1.5 mb-5">
-                            ${(m.tags || []).map(t => `<span class="px-2.5 py-1 bg-slate-100 text-slate-500 text-[10px] rounded-lg font-black uppercase">#${t}</span>`).join('')}
+                        ${m.text ? `<div class="bg-blue-50/40 text-blue-900 text-[13px] p-4 rounded-2xl mb-4 whitespace-pre-wrap leading-relaxed shadow-inner font-medium">${m.text}</div>` : ''}
+                        <div class="flex flex-wrap gap-1.5 mb-5">${(m.tags || []).map(t => `<span class="px-2.5 py-1 bg-slate-100 text-slate-500 text-[10px] rounded-lg font-black uppercase">#${t}</span>`).join('')}</div>
+                        
+                        <!-- アクションボタン: window.open を直接呼び出して確実にリンクを開く -->
+                        <div class="flex flex-wrap gap-2 mb-4">
+                            ${m.url ? `
+                            <button onclick="window.open('${m.url}', '_blank'); event.stopPropagation();" class="flex-1 min-w-[90px] bg-blue-50 text-blue-600 text-[11px] font-black py-2.5 rounded-xl border border-blue-100 hover:bg-blue-100 flex items-center justify-center gap-1.5 transition-colors">
+                                <i data-lucide="globe" size="14"></i>公式サイト
+                            </button>` : ''}
+                            ${m.mapUrl ? `
+                            <button onclick="window.open('${m.mapUrl}', '_blank'); event.stopPropagation();" class="flex-1 min-w-[90px] bg-green-50 text-green-600 text-[11px] font-black py-2.5 rounded-xl border border-green-100 hover:bg-green-100 flex items-center justify-center gap-1.5 transition-colors">
+                                <i data-lucide="map-pin" size="14"></i>マップ表示
+                            </button>` : ''}
                         </div>
+
                         <div class="flex justify-between items-center pt-4 border-t border-slate-50 mt-auto">
-                            ${m.url ? `<a href="${m.url}" target="_blank" class="text-blue-600 text-xs font-black flex items-center gap-1 hover:underline"><i data-lucide="external-link" size="14"></i> サイト</a>` : '<span></span>'}
-                            <div class="flex items-center gap-3">
-                                <button onclick="editMemo('${m.id}')" class="text-slate-400 hover:text-blue-600 transition-colors"><i data-lucide="pencil" size="16"></i></button>
-                                <span class="text-[9px] text-slate-300 font-black uppercase tracking-tighter">${m.timestamp ? new Date(m.timestamp).toLocaleDateString() : ''}</span>
-                            </div>
+                            <span class="text-[9px] text-slate-300 font-black uppercase tracking-tighter">${m.timestamp ? new Date(m.timestamp).toLocaleDateString() : ''}</span>
+                            <button onclick="editMemo('${m.id}')" class="text-slate-400 hover:text-blue-600 transition-colors p-1"><i data-lucide="pencil" size="16"></i></button>
                         </div>
                     </div>
                 </div>
@@ -635,34 +415,164 @@
             document.querySelectorAll('.dynamic-tag').forEach(c => c.remove());
             Array.from(tags).sort().forEach(tag => {
                 const btn = document.createElement('button');
-                btn.className = `dynamic-tag px-5 py-2 rounded-full text-[11px] font-black whitespace-nowrap transition-all ${currentTag === tag ? 'bg-blue-600 text-white shadow-lg shadow-blue-100' : 'bg-white border border-slate-200 text-slate-500 hover:text-blue-600'}`;
+                btn.className = `dynamic-tag px-5 py-2 rounded-full text-[11px] font-black transition-all ${currentTag === tag ? 'bg-blue-600 text-white shadow-lg' : 'bg-white border border-slate-200 text-slate-500 hover:border-blue-300'}`;
                 btn.textContent = tag; btn.onclick = () => { currentTag = tag; render(); };
                 document.getElementById('tagList').appendChild(btn);
             });
             if (typeof lucide !== 'undefined') lucide.createIcons();
         }
 
-        document.getElementById('fileInput').onchange = (e) => {
-            const file = e.target.files[0]; if (!file) return;
-            const reader = new FileReader();
-            reader.onload = async (ev) => {
-                try {
-                    const data = JSON.parse(ev.target.result);
-                    if (Array.isArray(data)) { allMemos = data; currentDriveFileId = null; await saveCache(); render(); }
-                } catch (err) { alert("JSON読み込み失敗"); }
-            };
-            reader.readAsText(file);
-        };
+        window.editMemo = (id) => {
+            const memo = allMemos.find(m => m.id === id); if (!memo) return;
+            editingMemoId = id;
+            document.getElementById('modalTitle').textContent = 'メモを編集';
+            document.getElementById('saveBtnText').textContent = '上書き保存';
+            document.getElementById('addTitle').value = memo.title || '';
+            document.getElementById('addUrl').value = memo.url || '';
+            document.getElementById('addMapUrl').value = memo.mapUrl || '';
+            document.getElementById('addText').value = memo.text || '';
+            document.getElementById('addTags').value = (memo.tags || []).join(', ');
+            uploadedImageDataUrl = '';
+            if (memo.image) {
+                document.getElementById('imagePreview').src = memo.image;
+                document.getElementById('previewContainer').classList.remove('hidden');
+                if (memo.image.startsWith('data:')) uploadedImageDataUrl = memo.image;
+                else document.getElementById('addImageUrl').value = memo.image;
+            } else { document.getElementById('previewContainer').classList.add('hidden'); }
+            document.getElementById('deleteMemoBtn').classList.remove('hidden'); 
+            renderTagHints(); 
+            document.getElementById('addModal').classList.remove('hidden');
+            refreshClearBtnVisibility();
+        }
 
-        document.getElementById('searchInput').oninput = (e) => { searchQuery = e.target.value; render(); };
-        document.querySelector('[data-tag="all"]').onclick = () => { currentTag = 'all'; render(); };
-        document.getElementById('closeAddModalBtn').onclick = () => document.getElementById('addModal').classList.add('hidden');
-        window.openLightbox = (src) => { document.getElementById('lightboxImg').src = src; document.getElementById('lightbox').classList.remove('hidden'); };
+        // --- その他補助 ---
+        async function clearAllLocalData() {
+            if(!confirm("データを初期化しますか？")) return;
+            await idbKeyval.clear(); location.reload();
+        }
+
+        function setupImageHandlers() {
+            document.getElementById('addImageFile').onchange = (e) => {
+                const file = e.target.files[0]; if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        const MAX = 800; let w = img.width, h = img.height;
+                        if (w > h && w > MAX) { h *= MAX/w; w = MAX; } else if (h > MAX) { w *= MAX/h; h = MAX; }
+                        canvas.width = w; canvas.height = h;
+                        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                        uploadedImageDataUrl = canvas.toDataURL('image/jpeg', 0.8);
+                        document.getElementById('imagePreview').src = uploadedImageDataUrl;
+                        document.getElementById('previewContainer').classList.remove('hidden');
+                        document.getElementById('addImageUrl').value = '';
+                    };
+                    img.src = ev.target.result;
+                };
+                reader.readAsDataURL(file);
+            };
+            document.getElementById('clearPreviewBtn').onclick = () => {
+                uploadedImageDataUrl = ''; document.getElementById('previewContainer').classList.add('hidden');
+            };
+        }
+
+        async function saveCache() {
+            await idbKeyval.set('travelMemos_cache', allMemos);
+            if (currentDriveFileId) await idbKeyval.set('driveFileId_cache', currentDriveFileId);
+        }
+
+        async function uploadToDrive() {
+            if (!currentDriveFileId) return true;
+            try {
+                const token = await ensureAccessToken();
+                if (gapi.client) gapi.client.setToken({ access_token: token });
+                const request = gapi.client.request({
+                    path: '/upload/drive/v3/files/' + currentDriveFileId,
+                    method: 'PATCH', params: { uploadType: 'media' }, body: JSON.stringify(allMemos, null, 2)
+                });
+                await new Promise((resolve, reject) => request.execute(r => r && r.error ? reject(r.error) : resolve(r)));
+                return true;
+            } catch (err) { return false; }
+        }
+
+        async function ensureAccessToken() {
+            const saved = await idbKeyval.get('gapi_access_token');
+            const expiry = await idbKeyval.get('gapi_token_expiry');
+            if (saved && expiry && Date.now() < parseInt(expiry)) return saved;
+            return new Promise((resolve) => {
+                tokenClient.callback = async (resp) => {
+                    await saveToken(resp.access_token); resolve(resp.access_token);
+                };
+                tokenClient.requestAccessToken({prompt: ''});
+            });
+        }
+
+        async function saveToken(token) {
+            accessToken = token;
+            await idbKeyval.set('gapi_access_token', token);
+            await idbKeyval.set('gapi_token_expiry', Date.now() + 3550 * 1000); 
+            updateDriveUI();
+        }
+
+        function updateDriveUI() {
+            const syncText = document.getElementById('driveSyncText');
+            if (syncText) syncText.textContent = currentDriveFileId ? "Drive同期" : "Driveを開く";
+            document.getElementById('logoutBtn')?.classList.toggle('hidden', !accessToken);
+        }
+
+        function refreshClearBtnVisibility() {
+            ['addTitle', 'addUrl', 'addMapUrl', 'addText', 'addImageUrl', 'addTags'].forEach(id => {
+                const val = document.getElementById(id).value;
+                document.getElementById('clear_'+id).classList.toggle('hidden', val.length === 0);
+            });
+        }
+
+        function renderTagHints() {
+            const container = document.getElementById('existingTagsContainer');
+            container.innerHTML = '';
+            const tags = new Set(); allMemos.forEach(m => (m.tags || []).forEach(t => tags.add(t)));
+            Array.from(tags).sort().forEach(tag => {
+                const btn = document.createElement('button');
+                btn.className = 'px-3 py-1 bg-slate-100 text-slate-500 text-[10px] rounded-xl font-black border border-slate-200 transition-colors hover:bg-slate-200';
+                btn.textContent = '#' + tag;
+                btn.onclick = () => {
+                    const input = document.getElementById('addTags');
+                    let cur = input.value.split(',').map(t => t.trim()).filter(t => t);
+                    if (cur.includes(tag)) cur = cur.filter(t => t !== tag); else cur.push(tag);
+                    input.value = cur.join(', '); refreshTagHintStyles();
+                };
+                container.appendChild(btn);
+            });
+            refreshTagHintStyles();
+        }
+
+        function refreshTagHintStyles() {
+            const input = document.getElementById('addTags');
+            const cur = input.value.split(',').map(t => t.trim());
+            document.querySelectorAll('#existingTagsContainer button').forEach(btn => {
+                const tag = btn.textContent.replace('#', '');
+                btn.className = cur.includes(tag) ? 'px-3 py-1 bg-blue-100 text-blue-600 text-[10px] rounded-xl font-black border border-blue-200' : 'px-3 py-1 bg-slate-100 text-slate-500 text-[10px] rounded-xl font-black border border-slate-200';
+            });
+        }
 
         window.addEventListener('load', async () => {
-            setupClearButtons(); await loadCache(); tryInitGoogleApi();
-            if (typeof lucide !== 'undefined') lucide.createIcons();
+            initLocalEvents();
+            const cached = await idbKeyval.get('travelMemos_cache');
+            if (cached) allMemos = cached;
+            currentDriveFileId = await idbKeyval.get('driveFileId_cache');
+            if (allMemos.length > 0) render();
+            await initGoogleDrive();
         });
+        
+        window.openLightbox = (src) => { document.getElementById('lightboxImg').src = src; document.getElementById('lightbox').classList.remove('hidden'); };
+        
+        async function deleteMemo() {
+            if (!confirm("削除しますか？")) return;
+            allMemos = allMemos.filter(m => m.id !== editingMemoId);
+            if (currentDriveFileId) await uploadToDrive();
+            await saveCache(); document.getElementById('addModal').classList.add('hidden'); render();
+        }
     </script>
 </body>
 </html>
