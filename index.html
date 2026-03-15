@@ -68,13 +68,14 @@
                     </div>
                     <div>
                         <h1 class="text-lg font-black text-slate-800 tracking-tight leading-none mb-1">Travel Scrapper</h1>
-                        <p class="text-[10px] text-blue-600 font-bold uppercase tracking-[0.2em]">Web Viewer v2.5 Auto-Search</p>
+                        <p class="text-[10px] text-blue-600 font-bold uppercase tracking-[0.2em]">Web Viewer v2.6</p>
                     </div>
                 </div>
 
                 <div class="flex items-center gap-1.5">
-                    <button id="openSettingsBtn" class="p-2 text-slate-400 hover:text-blue-600 transition-colors bg-slate-50 rounded-xl" title="API設定">
-                        <i data-lucide="settings" size="20"></i>
+                    <!-- ★ AI設定ボタン (JSで色が変わります) -->
+                    <button id="openSettingsBtn" class="p-2 transition-colors rounded-xl text-slate-400 bg-slate-50 hover:scale-105" title="AI機能の設定">
+                        <i data-lucide="bot" size="20"></i>
                     </button>
                     <button id="driveSyncBtn" class="flex items-center gap-2 px-5 py-2.5 bg-green-600 text-white rounded-xl font-bold text-sm shadow-lg shadow-green-100 active:scale-95 transition-all">
                         <span id="syncIconWrapper" class="inline-block"><i data-lucide="refresh-cw" size="18"></i></span>
@@ -240,22 +241,35 @@
         </div>
     </div>
 
-    <!-- AI設定モーダル -->
+    <!-- ★ AI設定モーダル (内容充実) -->
     <div id="settingsModal" class="fixed inset-0 z-[70] hidden flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
         <div class="bg-white w-full max-w-sm rounded-[2rem] p-6 shadow-2xl modal-enter">
             <h2 class="text-lg font-black text-slate-800 mb-4 flex items-center gap-2">
-                <i data-lucide="settings" size="20"></i> API設定
+                <i data-lucide="bot" size="24" class="text-blue-600"></i> AIアシスタント設定
             </h2>
             <div class="space-y-4">
                 <div>
                     <label class="block text-xs font-black text-slate-500 mb-1.5 uppercase tracking-widest">Gemini API Key</label>
                     <input type="password" id="geminiApiKeyInput" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 text-sm" placeholder="AI Studioのキーを入力">
-                    <p class="text-[10px] text-slate-400 mt-2 leading-relaxed">
-                        ※GitHub Pages等の公開サイトで推察機能を使う場合に必要です。<br>入力したキーはご利用のブラウザにのみ安全に保存されます。
-                    </p>
                 </div>
-                <button id="saveSettingsBtn" class="w-full py-3 bg-slate-800 text-white rounded-xl font-bold hover:bg-slate-900 transition-colors">設定を保存</button>
-                <button id="closeSettingsBtn" class="w-full py-3 text-slate-400 font-bold text-sm">閉じる</button>
+                
+                <!-- 取得手順の案内 -->
+                <div class="p-4 bg-blue-50 rounded-xl text-sm border border-blue-100">
+                    <p class="font-bold text-blue-800 mb-2 flex items-center gap-1.5">
+                        <i data-lucide="key" size="16"></i> APIキーの取得手順 (無料)
+                    </p>
+                    <ol class="list-decimal list-inside text-blue-700 space-y-1.5 text-xs font-medium">
+                        <li><a href="https://aistudio.google.com/app/apikey" target="_blank" class="text-blue-600 underline font-bold hover:text-blue-800">Google AI Studio</a> にアクセス</li>
+                        <li>Googleアカウントでログイン</li>
+                        <li>青い「Create API key」ボタンを押す</li>
+                        <li>生成された文字列をコピーして上に貼り付け</li>
+                    </ol>
+                </div>
+
+                <div class="pt-2 flex flex-col gap-2">
+                    <button id="saveSettingsBtn" class="w-full py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-colors shadow-lg shadow-blue-200">設定を保存</button>
+                    <button id="closeSettingsBtn" class="w-full py-3 text-slate-400 font-bold text-sm hover:bg-slate-50 rounded-xl transition-colors">閉じる</button>
+                </div>
             </div>
         </div>
     </div>
@@ -275,7 +289,7 @@
         let editingMemoId = null;
 
         // --- Config & API ---
-        const apiKey = ""; // Canvas Provides Key automatically
+        const apiKey = ""; // Canvas Provides Key automatically (MUST BE EMPTY)
         let userSetGeminiKey = ""; 
 
         const CONFIG_READY = (typeof CONFIG !== 'undefined' && CONFIG.CLIENT_ID && !CONFIG.CLIENT_ID.includes('YOUR_'));
@@ -320,11 +334,24 @@
             return `https://wsrv.nl/?url=${encodeURIComponent(url)}`;
         }
 
+        // ★ AIボタンの色を更新する関数
+        function updateApiBtnState() {
+            const btn = document.getElementById('openSettingsBtn');
+            if (!btn) return;
+            if (userSetGeminiKey) {
+                // キーあり：青色
+                btn.classList.remove('text-slate-400', 'bg-slate-50');
+                btn.classList.add('text-blue-600', 'bg-blue-100');
+            } else {
+                // キーなし：グレー
+                btn.classList.remove('text-blue-600', 'bg-blue-100');
+                btn.classList.add('text-slate-400', 'bg-slate-50');
+            }
+        }
+
         // --- Web Scraping (Google Image Search) ---
-        // Google画像検索のHTMLを裏側で取得し、1枚目のサムネイル画像を抽出する魔法の関数
         async function fetchFirstImageFromGoogle(keyword) {
             const searchUrl = `https://www.google.com/search?tbm=isch&q=${encodeURIComponent(keyword)}`;
-            // CORS回避のためのプロキシ
             const proxies = [
                 `https://api.allorigins.win/get?url=${encodeURIComponent(searchUrl)}`,
                 `https://corsproxy.io/?${encodeURIComponent(searchUrl)}`
@@ -343,7 +370,6 @@
                         html = await response.text();
                     }
                     
-                    // HTML内からサムネイル画像(encrypted-tbn0.gstatic.com/images)のURLを抽出
                     const regex = /src=["'](https:\/\/encrypted-tbn0\.gstatic\.com\/images\?q=tbn:[^"'\\]+)["'\\]/g;
                     let match;
                     const images = [];
@@ -352,14 +378,13 @@
                     }
                     
                     if (images.length > 0) {
-                        // 0番目は検索アイコン等の場合があるため、1番目を優先
                         return images.length > 1 ? images[1] : images[0];
                     }
                 } catch (e) {
                     console.warn("Proxy scrape failed:", proxyUrl, e);
                 }
             }
-            return null; // 取得失敗
+            return null;
         }
 
         // --- AI Implementation ---
@@ -383,7 +408,7 @@
                     
                     if (!response.ok) {
                         if (response.status === 404) throw new Error("AIモデルが見つかりません。");
-                        if (response.status === 400 || response.status === 403) throw new Error("APIキーが無効です。設定(歯車)から確認してください。");
+                        if (response.status === 400 || response.status === 403) throw new Error("APIキーが設定されていないか無効です。上のロボットアイコンから設定してください。");
                         throw new Error(`AI通信エラー (${response.status})`);
                     }
 
@@ -437,7 +462,7 @@
             }
         }
 
-        // ★ 画像の自動挿入（スクレイピング） ＆ 検索アシスト
+        // 画像の自動挿入（スクレイピング） ＆ 検索アシスト
         async function handleAiImageGeneration() {
             const title = document.getElementById('addTitle').value.trim();
             const url = document.getElementById('addUrl').value.trim();
@@ -462,20 +487,16 @@
             const user = `タイトル: ${title}\nURL: ${url}\nメモ: ${memoText}`;
 
             try {
-                // 1. AIに超高精度なキーワードを生成させる
                 const result = await safeCallGemini(user, sys);
                 const keyword = result?.trim().replace(/[*#]/g, '');
                 
                 if (keyword) {
-                    // 2. そのキーワードでGoogle画像検索の裏側をスクレイピングして画像URLを1枚引っこ抜く
                     let imageUrl = await fetchFirstImageFromGoogle(keyword);
                     
-                    // 3. スクレイピング失敗時は、これまで通りのプレースホルダータグにフォールバック
                     if (!imageUrl) {
                         imageUrl = ``;
                     }
                     
-                    // 画面にセット
                     imgInput.value = imageUrl;
                     uploadedImageDataUrl = ''; 
                     
@@ -483,7 +504,6 @@
                     previewCont.classList.remove('hidden');
                     document.getElementById('clear_addImageUrl')?.classList.remove('hidden');
 
-                    // 4. 「他の画像を探す」検索ボタンを表示・設定
                     searchLinkBtn.onclick = () => window.open(`https://www.google.com/search?tbm=isch&q=${encodeURIComponent(keyword)}`, '_blank');
                     searchLinkBtn.classList.remove('hidden');
 
@@ -523,7 +543,7 @@
                     
                     const urlIn = document.getElementById('addImageUrl');
                     if(urlIn) {
-                        urlIn.value = ''; // Base64化されたのでURL欄はクリア
+                        urlIn.value = ''; 
                         document.getElementById('clear_addImageUrl')?.classList.add('hidden');
                     }
                     showMsg("画像を読み込みました (ペースト/アップロード成功)");
@@ -564,7 +584,6 @@
                 });
             }
 
-            // ★ クリップボードからの直接ペースト(Ctrl+V)対応
             document.addEventListener('paste', (e) => {
                 if (document.getElementById('addModal').classList.contains('hidden')) return;
                 
@@ -623,6 +642,7 @@
                 userSetGeminiKey = document.getElementById('geminiApiKeyInput').value.trim();
                 await idbKeyval.set('user_gemini_key', userSetGeminiKey);
                 document.getElementById('settingsModal').classList.add('hidden');
+                updateApiBtnState(); // 保存時にボタンの色を更新
                 showMsg("設定を保存しました");
             };
 
@@ -637,6 +657,8 @@
             
             userSetGeminiKey = (await idbKeyval.get('user_gemini_key')) || "";
             document.getElementById('geminiApiKeyInput').value = userSetGeminiKey;
+            
+            updateApiBtnState(); // 起動時にボタンの色を更新
 
             accessToken = await idbKeyval.get('gapi_access_token');
             const expiry = await idbKeyval.get('gapi_token_expiry');
@@ -931,7 +953,6 @@
                 if(preview) preview.classList.add('hidden'); 
             }
             
-            // 編集時はキーワードが分からないので検索ボタンは一旦隠す
             if(searchLinkBtn) searchLinkBtn.classList.add('hidden');
 
             const delBtn = document.getElementById('deleteMemoBtn');
