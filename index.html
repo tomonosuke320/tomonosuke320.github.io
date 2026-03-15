@@ -5,17 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Travel Scrapper</title>
     
-    <!-- ファビコン (飛行機SVG) -->
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2003/svg' viewBox='0 0 24 24' fill='none' stroke='%232563eb' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M17.8 19.2L16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z'/></svg>">
 
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
-    
     <!-- IndexedDB Library -->
     <script src="https://cdn.jsdelivr.net/npm/idb-keyval@6/dist/umd.js"></script>
-    
     <!-- Google API Loader -->
     <script async defer src="https://apis.google.com/js/api.js"></script>
     <script async defer src="https://accounts.google.com/gsi/client"></script>
@@ -71,7 +68,7 @@
                     </div>
                     <div>
                         <h1 class="text-lg font-black text-slate-800 tracking-tight leading-none mb-1">Travel Scrapper</h1>
-                        <p class="text-[10px] text-blue-600 font-bold uppercase tracking-[0.2em]">Web Viewer v2.1</p>
+                        <p class="text-[10px] text-blue-600 font-bold uppercase tracking-[0.2em]">Web Viewer v2.3 Smart-Search</p>
                     </div>
                 </div>
 
@@ -145,19 +142,23 @@
                 <button id="closeAddModalBtn" class="text-slate-400 hover:text-slate-600 transition-colors"><i data-lucide="x" size="24"></i></button>
             </div>
             <div class="space-y-4">
+                
+                <!-- URL入力 (最優先で表示) -->
+                <div class="bg-blue-50/50 p-3 rounded-2xl border border-blue-100">
+                    <label class="block text-[10px] font-black text-blue-700 mb-1.5 ml-1 uppercase tracking-widest flex items-center gap-1">
+                        <i data-lucide="link" size="12"></i> 公式サイト・食べログ等のURL
+                    </label>
+                    <div class="relative">
+                        <input type="url" id="addUrl" class="w-full pl-4 pr-10 py-3 bg-white border border-blue-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm font-medium" placeholder="ここに入力すると正確に場所を特定できます">
+                        <button type="button" id="clear_addUrl" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300 hidden"><i data-lucide="x-circle" size="18"></i></button>
+                    </div>
+                </div>
+
                 <div>
                     <label class="block text-xs font-black text-slate-500 mb-1.5 ml-1 uppercase tracking-widest">タイトル *</label>
                     <div class="relative">
-                        <input type="text" id="addTitle" class="w-full pl-4 pr-10 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none" placeholder="例：中華そば 高野">
+                        <input type="text" id="addTitle" class="w-full pl-4 pr-10 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none font-medium text-slate-800" placeholder="例：中華そば 高野">
                         <button type="button" id="clear_addTitle" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300 hidden"><i data-lucide="x-circle" size="20"></i></button>
-                    </div>
-                </div>
-                
-                <div>
-                    <label class="block text-[10px] font-black text-slate-500 mb-1.5 ml-1 uppercase tracking-widest">公式サイト・食べログ等のURL (任意)</label>
-                    <div class="relative">
-                        <input type="url" id="addUrl" class="w-full pl-4 pr-10 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none text-sm" placeholder="https://...">
-                        <button type="button" id="clear_addUrl" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300 hidden"><i data-lucide="x-circle" size="18"></i></button>
                     </div>
                 </div>
 
@@ -172,32 +173,32 @@
                 <!-- マップ 推察ボタン＆入力 -->
                 <div class="pt-2">
                     <div class="flex justify-between items-center mb-1.5 ml-1">
-                        <label class="block text-[10px] font-black text-blue-600 uppercase tracking-widest flex items-center gap-1">
+                        <label class="block text-[10px] font-black text-green-600 uppercase tracking-widest flex items-center gap-1">
                             <i data-lucide="map-pin" size="12"></i> Googleマップ
                         </label>
-                        <button type="button" id="generateMapBtn" class="text-[10px] font-bold bg-blue-100 text-blue-700 px-3 py-1 rounded-lg hover:bg-blue-200 transition-all flex items-center gap-1">
-                            <i data-lucide="sparkles" size="12"></i> AI推察
+                        <button type="button" id="generateMapBtn" class="text-[10px] font-bold bg-green-100 text-green-700 px-3 py-1.5 rounded-lg hover:bg-green-200 transition-all flex items-center gap-1 shadow-sm shadow-green-50">
+                            <i data-lucide="sparkles" size="12"></i> 場所を正確に推察
                         </button>
                     </div>
                     <div class="relative">
-                        <input type="url" id="addMapUrl" class="w-full pl-4 pr-10 py-3 bg-blue-50 border border-blue-100 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none text-sm text-blue-800 font-medium" placeholder="タイトルやURLから場所を探します">
-                        <button type="button" id="clear_addMapUrl" class="absolute right-3 top-1/2 -translate-y-1/2 text-blue-300 hidden"><i data-lucide="x-circle" size="18"></i></button>
+                        <input type="url" id="addMapUrl" class="w-full pl-4 pr-10 py-3 bg-green-50/50 border border-green-100 rounded-2xl focus:ring-2 focus:ring-green-500 outline-none text-sm text-green-800 font-medium" placeholder="タイトルやURLから正確な場所を探します">
+                        <button type="button" id="clear_addMapUrl" class="absolute right-3 top-1/2 -translate-y-1/2 text-green-300 hidden"><i data-lucide="x-circle" size="18"></i></button>
                     </div>
                 </div>
 
-                <!-- 画像 推察ボタン＆入力 -->
-                <div class="pt-2">
-                    <div class="flex justify-between items-center mb-1.5 ml-1">
+                <!-- 画像 推察(検索オープン)ボタン＆入力 -->
+                <div class="pt-2 border-t border-slate-100">
+                    <div class="flex justify-between items-center mb-1.5 ml-1 pt-2">
                         <label class="block text-xs font-black text-slate-500 uppercase tracking-widest flex items-center gap-1">
                             画像
                         </label>
-                        <button type="button" id="generateImageBtn" class="text-[10px] font-bold bg-indigo-100 text-indigo-700 px-3 py-1 rounded-lg hover:bg-indigo-200 transition-all flex items-center gap-1">
-                            <i data-lucide="image" size="12"></i> AIで画像を探す
+                        <button type="button" id="generateImageBtn" class="text-[10px] font-bold bg-indigo-600 text-white px-3 py-1.5 rounded-lg hover:bg-indigo-700 transition-all flex items-center gap-1 shadow-md shadow-indigo-200">
+                            <i data-lucide="search" size="12"></i> AIで画像検索を開く
                         </button>
                     </div>
                     <div class="space-y-3">
                         <div class="relative">
-                            <input type="url" id="addImageUrl" class="w-full pl-4 pr-10 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none text-sm" placeholder="URLを手動入力、またはAIで取得">
+                            <input type="url" id="addImageUrl" class="w-full pl-4 pr-10 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none text-sm" placeholder="URLを手動入力、または上のボタンから検索">
                             <button type="button" id="clear_addImageUrl" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300 hidden"><i data-lucide="x-circle" size="20"></i></button>
                         </div>
                         <div class="flex items-center gap-3 pl-1">
@@ -208,7 +209,7 @@
                             </label>
                         </div>
                         <div id="previewContainer" class="relative hidden">
-                            <img id="imagePreview" src="" class="w-full h-40 object-cover rounded-2xl border border-slate-200 shadow-sm" onerror="this.onerror=null; this.src=''; this.parentElement.classList.add('hidden'); alert('画像の取得に失敗しました。リンク切れの可能性があります。');">
+                            <img id="imagePreview" src="" class="w-full h-40 object-cover rounded-2xl border border-slate-200 shadow-sm" onerror="this.onerror=null; this.parentElement.classList.add('hidden');">
                             <button type="button" id="clearPreviewBtn" class="absolute top-2 right-2 p-1.5 bg-slate-900/60 text-white rounded-full backdrop-blur-sm shadow-lg"><i data-lucide="x" size="16"></i></button>
                         </div>
                     </div>
@@ -242,7 +243,7 @@
                     <label class="block text-xs font-black text-slate-500 mb-1.5 uppercase tracking-widest">Gemini API Key</label>
                     <input type="password" id="geminiApiKeyInput" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 text-sm" placeholder="AI Studioのキーを入力">
                     <p class="text-[10px] text-slate-400 mt-2 leading-relaxed">
-                        ※AI推察機能を使う場合に必要です。<br>入力したキーはご利用のブラウザにのみ安全に保存されます。
+                        ※GitHub Pages等の公開サイトで推察機能を使う場合に必要です。<br>入力したキーはご利用のブラウザにのみ安全に保存されます。
                     </p>
                 </div>
                 <button id="saveSettingsBtn" class="w-full py-3 bg-slate-800 text-white rounded-xl font-bold hover:bg-slate-900 transition-colors">設定を保存</button>
@@ -266,7 +267,7 @@
         let editingMemoId = null;
 
         // --- Config & API ---
-        const apiKey = ""; // Canvas Provides Key automatically
+        const apiKey = ""; // Canvas Provides Key automatically (MUST BE EMPTY)
         let userSetGeminiKey = ""; 
 
         const CONFIG_READY = (typeof CONFIG !== 'undefined' && CONFIG.CLIENT_ID && !CONFIG.CLIENT_ID.includes('YOUR_'));
@@ -305,74 +306,42 @@
             };
         }
 
-        // --- AI Implementation (フォールバック付き) ---
-        
-        // 実際のAPIリクエスト処理
-        async function fetchGemini(userQuery, systemInstruction, useGrounding) {
+        // --- AI Implementation ---
+        async function safeCallGemini(userQuery, systemInstruction) {
             const keyToUse = userSetGeminiKey || apiKey || "";
-            const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${keyToUse}`;
+            const modelName = userSetGeminiKey ? "gemini-2.5-flash" : "gemini-2.5-flash-preview-09-2025";
+            const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${keyToUse}`;
             
             const payload = {
                 contents: [{ parts: [{ text: userQuery }] }],
                 systemInstruction: { parts: [{ text: systemInstruction }] }
             };
 
-            // Grounding (Google Search) を追加
-            if (useGrounding) {
-                payload.tools = [{ google_search: {} }];
-            }
-
-            const response = await fetch(endpoint, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-            
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}`);
-            }
-            
-            const result = await response.json();
-            return result.candidates?.[0]?.content?.parts?.[0]?.text;
-        }
-
-        // リトライ＆フォールバック制御付きの呼び出し
-        async function safeCallGemini(userQuery, systemInstruction) {
-            let lastError = null;
-            
-            // 1. まずは検索(Grounding)ありで試す
-            for (let i = 0; i < 2; i++) {
+            for (let i = 0; i < 3; i++) {
                 try {
-                    return await fetchGemini(userQuery, systemInstruction, true);
-                } catch (err) {
-                    lastError = err;
-                    if (err.message.includes('400') || err.message.includes('403') || err.message.includes('404')) {
-                        // Grounding非対応や権限エラーの場合はすぐ抜けてフォールバックへ
-                        break;
+                    const response = await fetch(endpoint, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    
+                    if (!response.ok) {
+                        if (response.status === 404) throw new Error("AIモデルが見つかりません。");
+                        if (response.status === 400 || response.status === 403) throw new Error("APIキーが無効です。設定(歯車)から確認してください。");
+                        throw new Error(`AI通信エラー (${response.status})`);
                     }
+
+                    const result = await response.json();
+                    return result.candidates?.[0]?.content?.parts?.[0]?.text;
+                } catch (err) {
+                    if (err.message.includes("APIキー")) throw err;
                     await new Promise(r => setTimeout(r, 1000));
                 }
             }
-            
-            console.warn("Grounding request failed, trying without search...", lastError);
-            
-            // 2. 失敗した場合、検索(Grounding)なしで再試行する
-            for (let i = 0; i < 3; i++) {
-                try {
-                    return await fetchGemini(userQuery, systemInstruction, false);
-                } catch (err) {
-                    lastError = err;
-                    if (err.message.includes('400') || err.message.includes('403')) {
-                        throw new Error("APIキーが無効です。設定(歯車)から確認してください。");
-                    }
-                    await new Promise(r => setTimeout(r, 1500));
-                }
-            }
-            
-            throw new Error("通信に失敗しました。少し時間をおいてください。");
+            throw new Error("AIとの通信に失敗しました。");
         }
 
-        // マップ推察
+        // ★ マップ推察（URLを活用して正確な場所を特定）
         async function handleAiMapGeneration() {
             const title = document.getElementById('addTitle').value.trim();
             const url = document.getElementById('addUrl').value.trim();
@@ -387,10 +356,11 @@
 
             btn.classList.add('btn-loading');
             const originalInner = btn.innerHTML;
-            btn.innerHTML = `<i data-lucide="loader-2" class="animate-spin" size="12"></i> 検索中...`;
+            btn.innerHTML = `<i data-lucide="loader-2" class="animate-spin" size="12"></i> 場所を特定中...`;
             if (window.lucide) lucide.createIcons();
 
-            const sys = "旅行メモの内容からGoogleマップ検索に最適な場所の名称（店名、観光地名、駅名など）を1つ特定してください。出力は検索キーワードのみ。URLが提供されている場合は、そのURLが示す実際の場所の名前を出力してください。";
+            // プロンプト：URLの情報を重視して場所を絞り込む
+            const sys = "旅行メモの内容からGoogleマップ検索に最適な場所の名称を1つ特定してください。出力は検索キーワードのみとし、挨拶は不要です。食べログ等のURLが提供されている場合は、そのURLが示す「具体的な地域名と店舗名（例: 神奈川県横浜市大口 中華そば 高野）」を出力し、同名他店と完全に区別できるようにしてください。";
             const user = `タイトル: ${title}\nURL: ${url}\nメモ: ${memoText}`;
 
             try {
@@ -399,7 +369,7 @@
                 if (keyword && keyword.length < 100) {
                     mapInput.value = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(keyword)}`;
                     document.getElementById('clear_addMapUrl')?.classList.remove('hidden');
-                    showMsg("マップの場所を推察しました");
+                    showMsg("マップの場所を正確に特定しました！");
                 } else {
                     showMsg("場所を特定できませんでした。", true);
                 }
@@ -412,15 +382,12 @@
             }
         }
 
-        // 画像推察
+        // ★ 画像検索（AIが高精度なキーワードを作ってGoogle画像検索を開く）
         async function handleAiImageGeneration() {
             const title = document.getElementById('addTitle').value.trim();
             const url = document.getElementById('addUrl').value.trim();
             const memoText = document.getElementById('addText').value.trim();
             const btn = document.getElementById('generateImageBtn');
-            const imgInput = document.getElementById('addImageUrl');
-            const previewCont = document.getElementById('previewContainer');
-            const imgPreview = document.getElementById('imagePreview');
 
             if (!title && !memoText && !url) {
                 showMsg("タイトル、URL、メモのいずれかを入力してください。", true);
@@ -429,25 +396,22 @@
 
             btn.classList.add('btn-loading');
             const originalInner = btn.innerHTML;
-            btn.innerHTML = `<i data-lucide="loader-2" class="animate-spin" size="12"></i> 検索中...`;
+            btn.innerHTML = `<i data-lucide="loader-2" class="animate-spin" size="12"></i> 検索キーワード生成中...`;
             if (window.lucide) lucide.createIcons();
 
-            const sys = "入力された旅行先（店舗や観光地）の、実際の写真・画像のURLをインターネット検索して1つだけ提供してください。出力は画像のURL（httpで始まる文字列）のみとし、他の文字やMarkdownは絶対に含めないでください。食べログなどのURLが入力されている場合は、そのサイト内の画像URLを優先して取得してください。";
+            const sys = "旅行メモの内容（特に提供されたURL）から、その特定の場所や料理の写真をGoogle画像検索で探すための最適なキーワードを生成してください。出力はキーワードのみ。同名他店と区別するため、地域名や店名を具体的に含めてください（例: '横浜 大口 中華そば高野 ラーメン'）。";
             const user = `タイトル: ${title}\nURL: ${url}\nメモ: ${memoText}`;
 
             try {
                 const result = await safeCallGemini(user, sys);
-                const imageUrl = result?.trim().replace(/[*#]/g, '');
+                const keyword = result?.trim().replace(/[*#]/g, '');
                 
-                if (imageUrl && imageUrl.startsWith('http')) {
-                    imgInput.value = imageUrl;
-                    uploadedImageDataUrl = ''; // ローカル画像をリセット
-                    imgPreview.src = imageUrl;
-                    previewCont.classList.remove('hidden');
-                    document.getElementById('clear_addImageUrl')?.classList.remove('hidden');
-                    showMsg("画像を挿入しました");
+                if (keyword) {
+                    // Google画像検索を別タブで開く
+                    window.open(`https://www.google.com/search?tbm=isch&q=${encodeURIComponent(keyword)}`, '_blank');
+                    showMsg("画像検索を開きました。好きな写真の「画像リンクをコピー」して貼り付けてください！");
                 } else {
-                    showMsg("適切な画像が見つかりませんでした。", true);
+                    showMsg("キーワードを生成できませんでした。", true);
                 }
             } catch (err) {
                 showMsg(err.message, true);
@@ -489,6 +453,8 @@
 
             document.getElementById('driveSyncBtn').onclick = handleSyncClick;
             document.getElementById('drivePickerBtn').onclick = handlePickerClick;
+            
+            // 推察ボタンのイベント割り当て
             document.getElementById('generateMapBtn').onclick = handleAiMapGeneration;
             document.getElementById('generateImageBtn').onclick = handleAiImageGeneration;
 
@@ -750,7 +716,7 @@
 
             container.innerHTML = filtered.map(m => `
                 <div class="memo-item bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm flex flex-col hover:shadow-xl transition-all duration-300">
-                    ${m.image ? `<img src="${m.image}" class="w-full h-auto cursor-zoom-in block" onclick="window.openLightbox('${m.image}')" loading="lazy">` : ''}
+                    ${m.image ? `<img src="${m.image}" class="w-full h-auto cursor-zoom-in block" onclick="window.openLightbox('${m.image}')" loading="lazy" onerror="this.onerror=null; this.src='${m.image}';">` : ''}
                     <div class="p-5 flex-1 flex flex-col">
                         <h3 class="font-black text-slate-800 mb-3 text-base leading-snug">${m.title}</h3>
                         ${m.text ? `<div class="bg-blue-50/40 text-blue-900 text-[13px] p-4 rounded-2xl mb-4 whitespace-pre-wrap leading-relaxed shadow-inner font-medium">${m.text}</div>` : ''}
@@ -863,6 +829,23 @@
                 if(prev) prev.classList.add('hidden');
                 document.getElementById('addImageUrl').value = '';
             };
+            
+            // 手動でURLが入力された時のプレビュー更新
+            const urlInput = document.getElementById('addImageUrl');
+            if(urlInput) {
+                urlInput.addEventListener('input', (e) => {
+                    const url = e.target.value.trim();
+                    const prevCont = document.getElementById('previewContainer');
+                    const imgPreview = document.getElementById('imagePreview');
+                    if (url && url.startsWith('http')) {
+                        uploadedImageDataUrl = '';
+                        imgPreview.src = url;
+                        prevCont.classList.remove('hidden');
+                    } else if (!uploadedImageDataUrl) {
+                        prevCont.classList.add('hidden');
+                    }
+                });
+            }
         }
 
         function refreshFilterTags() {
