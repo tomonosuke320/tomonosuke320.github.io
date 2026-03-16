@@ -889,7 +889,10 @@
                         await idbKeyval.set('gapi_access_token', accessToken);
                         if (actionAfterAuth === 'picker') showPicker();
                         else if (actionAfterAuth === 'sync') fetchDriveMemos(currentDriveFileId);
-                        else if (actionAfterAuth === 'createNewDrivePage') createNewDrivePage();
+                        else if (actionAfterAuth === 'createNewDrivePage') {
+                            pickerMode = 'selectFolderForNewPage';
+                            showPicker();
+                        }
                         actionAfterAuth = null;
                         updateDriveUI();
                     },
@@ -922,14 +925,35 @@
         }
 
         function showPicker() {
+            let view;
+            let title = "";
+            if (pickerMode === 'selectFolderForNewPage') {
+                view = new google.picker.DocsView(google.picker.ViewId.FOLDERS)
+                    .setIncludeFolders(true)
+                    .setSelectFolderEnabled(true)
+                    .setMimeTypes('application/vnd.google-apps.folder');
+                title = "保存先フォルダを選択してください";
+            } else {
+                view = new google.picker.DocsView(google.picker.ViewId.DOCS).setMimeTypes('application/json');
+                title = "旅行メモのファイルを選択してください";
+            }
+
             const picker = new google.picker.PickerBuilder()
-                .addView(new google.picker.DocsView(google.picker.ViewId.DOCS).setMimeTypes('application/json'))
-                .setOAuthToken(accessToken).setDeveloperKey(DRIVE_API_KEY)
+                .addView(view)
+                .setTitle(title)
+                .setOAuthToken(accessToken)
+                .setDeveloperKey(DRIVE_API_KEY)
                 .setCallback(async (data) => {
                     if (data.action === google.picker.Action.PICKED) {
                         const file = data.docs[0];
                         
-                        if (pickerMode === 'newPage') {
+                        if (pickerMode === 'selectFolderForNewPage') {
+                            // ★ フォルダが選択されたらその中に新規作成
+                            const folderId = file.id;
+                            const pageName = sessionStorage.getItem('pendingPageName') || '新しい旅行';
+                            sessionStorage.removeItem('pendingPageName');
+                            await executeCreateNewDrivePage(pageName, folderId);
+                        } else if (pickerMode === 'newPage') {
                             // ★ ドライブのファイルを「新しいページ」として追加
                             const fileName = file.name.replace('.json', '');
                             document.getElementById('newPageModal').classList.add('hidden');
@@ -1141,24 +1165,46 @@
 
         async function createNewDrivePage() {
             const pageName = document.getElementById('newPageName').value.trim() || '新しい旅行';
-            if (!accessToken) { actionAfterAuth = 'createNewDrivePage'; tokenClient.requestAccessToken({prompt: 'consent'}); return; }
+            sessionStorage.setItem('pendingPageName', pageName);
+
+            if (!accessToken) { 
+                actionAfterAuth = 'createNewDrivePage'; 
+                tokenClient.requestAccessToken({prompt: 'consent'}); 
+                return; 
+            }
+            
+            // フォルダ選択ピッカーを開く
+            pickerMode = 'selectFolderForNewPage';
+            showPicker();
+        }
+
+        async function executeCreateNewDrivePage(pageName, folderId) {
             try {
-                const metadata = { name: pageName + ".json", mimeType: 'application/json' };
+                const metadata = { 
+                    name: pageName + ".json", 
+                    mimeType: 'application/json',
+                    parents: [folderId] // ★ 選択したフォルダIDを指定
+                };
                 const content = JSON.stringify({ pageName: pageName, memos: [] }, null, 2);
                 const boundary = '-------314159265358979323846';
                 const delimiter = "\r\n--" + boundary + "\r\n";
                 const multipartRequestBody = delimiter + 'Content-Type: application/json\r\n\r\n' + JSON.stringify(metadata) + delimiter + 'Content-Type: application/json\r\n\r\n' + content + "\r\n--" + boundary + "--";
+                
                 const request = gapi.client.request({
                     path: '/upload/drive/v3/files', method: 'POST',
                     params: { uploadType: 'multipart' },
                     headers: { 'Content-Type': 'multipart/related; boundary="' + boundary + '"' },
                     body: multipartRequestBody
                 });
+                
                 const resp = await new Promise((resolve, reject) => request.execute(r => r.error ? reject(r.error) : resolve(r)));
                 await createNewPage(pageName, resp.id, []);
                 document.getElementById('newPageModal').classList.add('hidden');
-                showMsg("Driveにページを作成しました");
-            } catch (err) { showMsg("失敗しました", true); }
+                showMsg("指定したフォルダにページを作成しました");
+            } catch (err) { 
+                showMsg("作成に失敗しました", true); 
+                console.error(err);
+            }
         }
 
         async function handleSettingFileUpload(e) {
