@@ -77,7 +77,7 @@
                     </div>
                     <div>
                         <h1 class="text-lg font-black text-slate-800 tracking-tight leading-none mb-1">Travel Scrapper</h1>
-                        <p class="text-[10px] text-blue-600 font-bold uppercase tracking-[0.2em]">Web Viewer v3.1 Sync-UI</p>
+                        <p class="text-[10px] text-blue-600 font-bold uppercase tracking-[0.2em]">Web Viewer v3.2 Stable-AI</p>
                     </div>
                 </div>
 
@@ -85,7 +85,7 @@
                     <button id="openSettingsBtn" class="p-2 transition-colors rounded-xl text-slate-400 bg-slate-50 hover:scale-105" title="AI機能の設定">
                         <i data-lucide="bot" size="20"></i>
                     </button>
-                    <!-- ★ Drive同期ボタン (状態によって色・アイコン・テキストが変わります) -->
+                    <!-- Drive同期ボタン -->
                     <button id="driveSyncBtn" class="flex items-center gap-2 px-5 py-2.5 bg-slate-600 text-white rounded-xl font-bold text-sm shadow-lg shadow-slate-200 hover:bg-slate-700 active:scale-95 transition-all">
                         <span id="syncIconWrapper" class="inline-block"><i data-lucide="cloud" size="18"></i></span>
                         <span id="driveSyncText">Drive連携</span>
@@ -321,7 +321,7 @@
         let mapMarkers = [];
 
         // --- Config & API ---
-        const apiKey = ""; // Canvas Provides Key automatically (MUST BE EMPTY)
+        const apiKey = ""; // Canvas Provides Key automatically
         let userSetGeminiKey = ""; 
 
         const CONFIG_READY = (typeof CONFIG !== 'undefined' && CONFIG.CLIENT_ID && !CONFIG.CLIENT_ID.includes('YOUR_'));
@@ -378,7 +378,6 @@
             }
         }
 
-        // ★ Drive同期ボタンの状態を動的に更新する関数
         function updateDriveUI() {
             const syncBtn = document.getElementById('driveSyncBtn');
             const syncText = document.getElementById('driveSyncText');
@@ -389,21 +388,17 @@
 
             if (!syncBtn || !syncText || !iconWrapper) return;
 
-            // ボタンのベースクラスを一旦リセット
             syncBtn.className = "flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm shadow-lg active:scale-95 transition-all";
 
             if (!accessToken) {
-                // 1. 未ログイン状態（グレー）
                 syncBtn.classList.add('bg-slate-600', 'text-white', 'shadow-slate-200', 'hover:bg-slate-700');
                 syncText.textContent = "Drive連携";
                 iconWrapper.innerHTML = '<i data-lucide="cloud" size="18"></i>';
             } else if (!currentDriveFileId) {
-                // 2. ログイン済み ＆ ファイル未選択（青色）
                 syncBtn.classList.add('bg-blue-600', 'text-white', 'shadow-blue-200', 'hover:bg-blue-700');
                 syncText.textContent = "Driveを開く";
                 iconWrapper.innerHTML = '<i data-lucide="folder-open" size="18"></i>';
             } else {
-                // 3. ログイン済み ＆ ファイル選択済み・同期準備完了（緑色）
                 syncBtn.classList.add('bg-green-600', 'text-white', 'shadow-green-200', 'hover:bg-green-700');
                 syncText.textContent = "同期済み";
                 iconWrapper.innerHTML = '<i data-lucide="check-circle" size="18"></i>';
@@ -433,7 +428,7 @@
             }
         }
 
-        // --- AI Implementation ---
+        // --- AI Implementation (★ 指数的バックオフ付きで超安定化) ---
         async function safeCallGemini(userQuery, systemInstruction) {
             const keyToUse = userSetGeminiKey || apiKey || "";
             const modelName = userSetGeminiKey ? "gemini-2.5-flash" : "gemini-2.5-flash-preview-09-2025";
@@ -444,7 +439,8 @@
                 systemInstruction: { parts: [{ text: systemInstruction }] }
             };
 
-            for (let i = 0; i < 3; i++) {
+            // 最大5回までリトライ (1秒, 2秒, 4秒, 8秒, 16秒)
+            for (let i = 0; i < 5; i++) {
                 try {
                     const response = await fetch(endpoint, {
                         method: 'POST',
@@ -453,19 +449,31 @@
                     });
                     
                     if (!response.ok) {
-                        if (response.status === 404) throw new Error("AIモデルが見つかりません。");
-                        if (response.status === 400 || response.status === 403) throw new Error("APIキーが設定されていないか無効です。上のロボットアイコンから設定してください。");
-                        throw new Error(`AI通信エラー (${response.status})`);
+                        // 400や403はAPIキーの不正が濃厚なため、リトライせずにすぐエラーにする
+                        if (response.status === 400 || response.status === 403) {
+                            throw new Error("API_KEY_ERROR");
+                        }
+                        // その他のエラー(500番台や429制限など)はリトライ対象
+                        throw new Error(`HTTP error ${response.status}`);
                     }
 
                     const result = await response.json();
                     return result.candidates?.[0]?.content?.parts?.[0]?.text;
+                    
                 } catch (err) {
-                    if (err.message.includes("APIキー")) throw err;
-                    await new Promise(r => setTimeout(r, 1000));
+                    if (err.message === "API_KEY_ERROR") {
+                        throw new Error("APIキーが設定されていないか無効です。上のロボットアイコンから設定してください。");
+                    }
+                    
+                    // 5回目の失敗ならループを抜けて最終的なエラーを投げる
+                    if (i === 4) break; 
+                    
+                    // 指数的バックオフ: 1秒, 2秒, 4秒, 8秒 と待機時間を延ばす
+                    const delay = Math.pow(2, i) * 1000;
+                    await new Promise(r => setTimeout(r, delay));
                 }
             }
-            throw new Error("AIとの通信に失敗しました。");
+            throw new Error("AIとの通信に失敗しました。少し時間を置いて再度お試しください。");
         }
 
         async function handleAiMapGeneration() {
@@ -513,7 +521,7 @@
                 }
             } catch (err) {
                 console.error("AI Map Error:", err);
-                showMsg("推察に失敗しました。もう一度お試しください。", true);
+                showMsg(err.message.includes("APIキー") ? err.message : "推察に失敗しました。もう一度お試しください。", true);
             } finally {
                 btn.classList.remove('btn-loading');
                 btn.innerHTML = originalInner;
@@ -786,7 +794,6 @@
             const iconWrapper = document.getElementById('syncIconWrapper');
             const syncBtn = document.getElementById('driveSyncBtn');
             
-            // ★ 同期中のUI表示（くるくる回る）
             if (btnText) btnText.textContent = "同期中...";
             if (iconWrapper) iconWrapper.innerHTML = '<i data-lucide="refresh-cw" size="18" class="animate-spin"></i>';
             if (syncBtn) syncBtn.className = "flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm shadow-lg bg-green-500 text-white shadow-green-200 transition-all";
@@ -808,7 +815,7 @@
                     showMsg("再ログインが必要です。チェックボックスを忘れずに。", true);
                 }
             } finally {
-                updateDriveUI(); // 通信が終わったら元の色に戻す
+                updateDriveUI();
             }
         }
 
@@ -894,7 +901,6 @@
             
             let success = true;
             if (currentDriveFileId && accessToken) {
-                // ★ 保存中（通信中）のUI表示
                 const syncBtnText = document.getElementById('driveSyncText');
                 const syncIconWrapper = document.getElementById('syncIconWrapper');
                 const syncBtn = document.getElementById('driveSyncBtn');
@@ -904,7 +910,7 @@
                 if (window.lucide) lucide.createIcons();
 
                 success = await pushToDrive();
-                updateDriveUI(); // 元に戻す
+                updateDriveUI(); 
             }
 
             if (success) {
@@ -923,7 +929,6 @@
             allMemos = allMemos.filter(m => m.id !== editingMemoId);
             let success = true;
             if (currentDriveFileId && accessToken) {
-                // ★ 削除中（通信中）のUI表示
                 const syncBtnText = document.getElementById('driveSyncText');
                 const syncIconWrapper = document.getElementById('syncIconWrapper');
                 const syncBtn = document.getElementById('driveSyncBtn');
@@ -933,7 +938,7 @@
                 if (window.lucide) lucide.createIcons();
 
                 success = await pushToDrive();
-                updateDriveUI(); // 元に戻す
+                updateDriveUI(); 
             }
 
             if (success) {
