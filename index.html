@@ -17,7 +17,7 @@
     <script async defer src="https://apis.google.com/js/api.js"></script>
     <script async defer src="https://accounts.google.com/gsi/client"></script>
     
-    <!-- Leaflet CSS & JS -->
+    <!-- Leaflet CSS & JS (地図描画用) -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
@@ -45,7 +45,7 @@
         .modal-enter { animation: fadeIn 0.2s ease-out forwards; }
         .btn-loading { pointer-events: none; opacity: 0.7; }
 
-        /* Leaflet Pop-up */
+        /* Leaflet Pop-up カスタマイズ */
         .leaflet-popup-content-wrapper { border-radius: 1rem; box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1); padding: 0; }
         .leaflet-popup-content { margin: 12px; }
         #mapView { height: calc(100vh - 280px); min-height: 400px; width: 100%; border-radius: 1.5rem; z-index: 10; }
@@ -77,7 +77,7 @@
                     </div>
                     <div>
                         <h1 class="text-lg font-black text-slate-800 tracking-tight leading-none mb-1">Travel Scrapper</h1>
-                        <p class="text-[10px] text-blue-600 font-bold uppercase tracking-[0.2em]">Web Viewer v3.2 Stable-AI</p>
+                        <p class="text-[10px] text-blue-600 font-bold uppercase tracking-[0.2em]">Web Viewer v3.0 Map-Enabled</p>
                     </div>
                 </div>
 
@@ -85,10 +85,9 @@
                     <button id="openSettingsBtn" class="p-2 transition-colors rounded-xl text-slate-400 bg-slate-50 hover:scale-105" title="AI機能の設定">
                         <i data-lucide="bot" size="20"></i>
                     </button>
-                    <!-- Drive同期ボタン -->
-                    <button id="driveSyncBtn" class="flex items-center gap-2 px-5 py-2.5 bg-slate-600 text-white rounded-xl font-bold text-sm shadow-lg shadow-slate-200 hover:bg-slate-700 active:scale-95 transition-all">
-                        <span id="syncIconWrapper" class="inline-block"><i data-lucide="cloud" size="18"></i></span>
-                        <span id="driveSyncText">Drive連携</span>
+                    <button id="driveSyncBtn" class="flex items-center gap-2 px-5 py-2.5 bg-green-600 text-white rounded-xl font-bold text-sm shadow-lg shadow-green-100 active:scale-95 transition-all">
+                        <span id="syncIconWrapper" class="inline-block"><i data-lucide="refresh-cw" size="18"></i></span>
+                        <span id="driveSyncText">Drive同期</span>
                     </button>
                 </div>
             </div>
@@ -198,6 +197,7 @@
                     </div>
                 </div>
                 
+                <!-- マップ 推察 (座標保存対応) -->
                 <div class="pt-2">
                     <div class="flex justify-between items-center mb-1.5 ml-1">
                         <label class="block text-[10px] font-black text-green-600 uppercase tracking-widest flex items-center gap-1">
@@ -211,10 +211,12 @@
                         <input type="url" id="addMapUrl" class="w-full pl-4 pr-10 py-3 bg-green-50/50 border border-green-100 rounded-2xl focus:ring-2 focus:ring-green-500 outline-none text-sm text-green-800 font-medium" placeholder="タイトルやURLから正確な場所を探します">
                         <button type="button" id="clear_addMapUrl" class="absolute right-3 top-1/2 -translate-y-1/2 text-green-300 hidden"><i data-lucide="x-circle" size="18"></i></button>
                     </div>
+                    <!-- 隠しフィールド: マップ表示用の座標 -->
                     <input type="hidden" id="addLat" value="">
                     <input type="hidden" id="addLng" value="">
                 </div>
 
+                <!-- 画像 検索オープン -->
                 <div class="pt-2 border-t border-slate-100">
                     <div class="flex justify-between items-center mb-1.5 ml-1 pt-2">
                         <label class="block text-xs font-black text-slate-500 uppercase tracking-widest flex items-center gap-1">
@@ -316,7 +318,7 @@
         let currentDriveFileId = null; 
         let uploadedImageDataUrl = ''; 
         let editingMemoId = null;
-        let viewMode = 'list';
+        let viewMode = 'list'; // 'list' or 'map'
         let leafletMap = null;
         let mapMarkers = [];
 
@@ -378,34 +380,6 @@
             }
         }
 
-        function updateDriveUI() {
-            const syncBtn = document.getElementById('driveSyncBtn');
-            const syncText = document.getElementById('driveSyncText');
-            const iconWrapper = document.getElementById('syncIconWrapper');
-            const logoutBtn = document.getElementById('logoutBtn');
-
-            if (logoutBtn) logoutBtn.classList.toggle('hidden', !accessToken);
-
-            if (!syncBtn || !syncText || !iconWrapper) return;
-
-            syncBtn.className = "flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm shadow-lg active:scale-95 transition-all";
-
-            if (!accessToken) {
-                syncBtn.classList.add('bg-slate-600', 'text-white', 'shadow-slate-200', 'hover:bg-slate-700');
-                syncText.textContent = "Drive連携";
-                iconWrapper.innerHTML = '<i data-lucide="cloud" size="18"></i>';
-            } else if (!currentDriveFileId) {
-                syncBtn.classList.add('bg-blue-600', 'text-white', 'shadow-blue-200', 'hover:bg-blue-700');
-                syncText.textContent = "Driveを開く";
-                iconWrapper.innerHTML = '<i data-lucide="folder-open" size="18"></i>';
-            } else {
-                syncBtn.classList.add('bg-green-600', 'text-white', 'shadow-green-200', 'hover:bg-green-700');
-                syncText.textContent = "同期済み";
-                iconWrapper.innerHTML = '<i data-lucide="check-circle" size="18"></i>';
-            }
-            if (window.lucide) lucide.createIcons();
-        }
-
         // --- View Mode Toggle ---
         function setViewMode(mode) {
             viewMode = mode;
@@ -424,11 +398,11 @@
                 btnList.className = "flex-1 sm:flex-none px-6 py-2.5 rounded-xl text-sm font-bold transition-all text-slate-500 hover:text-slate-800 flex items-center justify-center gap-2";
                 listContainer.classList.add('hidden');
                 mapContainer.classList.remove('hidden');
-                renderMap();
+                renderMap(); // マップを描画
             }
         }
 
-        // --- AI Implementation (★ 指数的バックオフ付きで超安定化) ---
+        // --- AI Implementation ---
         async function safeCallGemini(userQuery, systemInstruction) {
             const keyToUse = userSetGeminiKey || apiKey || "";
             const modelName = userSetGeminiKey ? "gemini-2.5-flash" : "gemini-2.5-flash-preview-09-2025";
@@ -439,8 +413,7 @@
                 systemInstruction: { parts: [{ text: systemInstruction }] }
             };
 
-            // 最大5回までリトライ (1秒, 2秒, 4秒, 8秒, 16秒)
-            for (let i = 0; i < 5; i++) {
+            for (let i = 0; i < 3; i++) {
                 try {
                     const response = await fetch(endpoint, {
                         method: 'POST',
@@ -449,33 +422,22 @@
                     });
                     
                     if (!response.ok) {
-                        // 400や403はAPIキーの不正が濃厚なため、リトライせずにすぐエラーにする
-                        if (response.status === 400 || response.status === 403) {
-                            throw new Error("API_KEY_ERROR");
-                        }
-                        // その他のエラー(500番台や429制限など)はリトライ対象
-                        throw new Error(`HTTP error ${response.status}`);
+                        if (response.status === 404) throw new Error("AIモデルが見つかりません。");
+                        if (response.status === 400 || response.status === 403) throw new Error("APIキーが設定されていないか無効です。上のロボットアイコンから設定してください。");
+                        throw new Error(`AI通信エラー (${response.status})`);
                     }
 
                     const result = await response.json();
                     return result.candidates?.[0]?.content?.parts?.[0]?.text;
-                    
                 } catch (err) {
-                    if (err.message === "API_KEY_ERROR") {
-                        throw new Error("APIキーが設定されていないか無効です。上のロボットアイコンから設定してください。");
-                    }
-                    
-                    // 5回目の失敗ならループを抜けて最終的なエラーを投げる
-                    if (i === 4) break; 
-                    
-                    // 指数的バックオフ: 1秒, 2秒, 4秒, 8秒 と待機時間を延ばす
-                    const delay = Math.pow(2, i) * 1000;
-                    await new Promise(r => setTimeout(r, delay));
+                    if (err.message.includes("APIキー")) throw err;
+                    await new Promise(r => setTimeout(r, 1000));
                 }
             }
-            throw new Error("AIとの通信に失敗しました。少し時間を置いて再度お試しください。");
+            throw new Error("AIとの通信に失敗しました。");
         }
 
+        // ★ マップ推察 (JSONでキーワードと座標を取得するように進化)
         async function handleAiMapGeneration() {
             const title = document.getElementById('addTitle').value.trim();
             const url = document.getElementById('addUrl').value.trim();
@@ -503,6 +465,7 @@
 
             try {
                 const result = await safeCallGemini(user, sys);
+                // JSON部分だけを抽出
                 const jsonStr = result?.trim().replace(/```json/gi, '').replace(/```/g, '');
                 const data = JSON.parse(jsonStr);
 
@@ -510,6 +473,7 @@
                     mapInput.value = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(data.keyword)}`;
                     document.getElementById('clear_addMapUrl')?.classList.remove('hidden');
                     
+                    // 座標を隠しフィールドにセット
                     if (data.lat && data.lng) {
                         latInput.value = data.lat;
                         lngInput.value = data.lng;
@@ -521,7 +485,7 @@
                 }
             } catch (err) {
                 console.error("AI Map Error:", err);
-                showMsg(err.message.includes("APIキー") ? err.message : "推察に失敗しました。もう一度お試しください。", true);
+                showMsg("推察に失敗しました。もう一度お試しください。", true);
             } finally {
                 btn.classList.remove('btn-loading');
                 btn.innerHTML = originalInner;
@@ -529,6 +493,7 @@
             }
         }
 
+        // AI画像検索オープン
         async function handleAiImageGeneration() {
             const title = document.getElementById('addTitle').value.trim();
             const url = document.getElementById('addUrl').value.trim();
@@ -763,10 +728,16 @@
             location.reload();
         }
 
+        function updateDriveUI() {
+            const syncText = document.getElementById('driveSyncText');
+            if (syncText) syncText.textContent = currentDriveFileId ? "Drive同期" : "Driveを開く";
+            const logoutBtn = document.getElementById('logoutBtn');
+            if (logoutBtn) logoutBtn.classList.toggle('hidden', !accessToken);
+        }
+
         function handleSyncClick() {
             if (!accessToken) { actionAfterAuth = 'sync'; tokenClient.requestAccessToken({prompt: 'consent'}); }
-            else if (!currentDriveFileId) { handlePickerClick(); }
-            else { fetchDriveMemos(currentDriveFileId); }
+            else { if (currentDriveFileId) fetchDriveMemos(currentDriveFileId); else handlePickerClick(); }
         }
 
         function handlePickerClick() {
@@ -792,12 +763,9 @@
         async function fetchDriveMemos(fileId) {
             const btnText = document.getElementById('driveSyncText');
             const iconWrapper = document.getElementById('syncIconWrapper');
-            const syncBtn = document.getElementById('driveSyncBtn');
             
             if (btnText) btnText.textContent = "同期中...";
-            if (iconWrapper) iconWrapper.innerHTML = '<i data-lucide="refresh-cw" size="18" class="animate-spin"></i>';
-            if (syncBtn) syncBtn.className = "flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm shadow-lg bg-green-500 text-white shadow-green-200 transition-all";
-            if (window.lucide) lucide.createIcons();
+            if (iconWrapper) iconWrapper.classList.add('animate-spin');
             
             try {
                 const resp = await gapi.client.drive.files.get({ fileId: fileId, alt: 'media' });
@@ -811,11 +779,12 @@
                 }
             } catch (e) {
                 if (e.status === 401 || e.status === 403) {
-                    accessToken = null; 
+                    accessToken = null; updateDriveUI();
                     showMsg("再ログインが必要です。チェックボックスを忘れずに。", true);
                 }
             } finally {
-                updateDriveUI();
+                if (btnText) btnText.textContent = currentDriveFileId ? "Drive同期" : "Driveを開く";
+                if (iconWrapper) iconWrapper.classList.remove('animate-spin');
             }
         }
 
@@ -875,6 +844,7 @@
             const image = (preview && !preview.classList.contains('hidden')) 
                         ? (uploadedImageDataUrl || document.getElementById('addImageUrl').value.trim()) : null;
 
+            // 座標データの取得
             const latStr = document.getElementById('addLat').value;
             const lngStr = document.getElementById('addLng').value;
 
@@ -900,18 +870,7 @@
             }
             
             let success = true;
-            if (currentDriveFileId && accessToken) {
-                const syncBtnText = document.getElementById('driveSyncText');
-                const syncIconWrapper = document.getElementById('syncIconWrapper');
-                const syncBtn = document.getElementById('driveSyncBtn');
-                if(syncBtnText) syncBtnText.textContent = "保存中...";
-                if(syncIconWrapper) syncIconWrapper.innerHTML = '<i data-lucide="refresh-cw" size="18" class="animate-spin"></i>';
-                if (syncBtn) syncBtn.className = "flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm shadow-lg bg-green-500 text-white shadow-green-200 transition-all";
-                if (window.lucide) lucide.createIcons();
-
-                success = await pushToDrive();
-                updateDriveUI(); 
-            }
+            if (currentDriveFileId && accessToken) success = await pushToDrive();
 
             if (success) {
                 await idbKeyval.set('travelMemos_cache', allMemos);
@@ -928,19 +887,7 @@
             const old = [...allMemos];
             allMemos = allMemos.filter(m => m.id !== editingMemoId);
             let success = true;
-            if (currentDriveFileId && accessToken) {
-                const syncBtnText = document.getElementById('driveSyncText');
-                const syncIconWrapper = document.getElementById('syncIconWrapper');
-                const syncBtn = document.getElementById('driveSyncBtn');
-                if(syncBtnText) syncBtnText.textContent = "削除中...";
-                if(syncIconWrapper) syncIconWrapper.innerHTML = '<i data-lucide="refresh-cw" size="18" class="animate-spin"></i>';
-                if (syncBtn) syncBtn.className = "flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm shadow-lg bg-red-500 text-white shadow-red-200 transition-all";
-                if (window.lucide) lucide.createIcons();
-
-                success = await pushToDrive();
-                updateDriveUI(); 
-            }
-
+            if (currentDriveFileId && accessToken) success = await pushToDrive();
             if (success) {
                 await idbKeyval.set('travelMemos_cache', allMemos);
                 document.getElementById('addModal').classList.add('hidden');
@@ -949,6 +896,7 @@
             } else { allMemos = old; }
         }
 
+        // 共通のフィルタリングロジック
         function getFilteredMemos() {
             return allMemos.filter(m => {
                 const textMatch = ((m.title || '') + (m.text || '')).toLowerCase().includes(searchQuery.toLowerCase());
@@ -1007,14 +955,17 @@
             if (window.lucide) lucide.createIcons();
         }
 
+        // ★ 地図の描画処理
         function renderMap() {
             if (!leafletMap) {
+                // 初期化 (東京駅周辺をデフォルト)
                 leafletMap = L.map('mapView').setView([35.681236, 139.767125], 5);
                 L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
                     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> contributors'
                 }).addTo(leafletMap);
             }
 
+            // 既存のマーカーをクリア
             mapMarkers.forEach(m => leafletMap.removeLayer(m));
             mapMarkers = [];
 
@@ -1025,6 +976,7 @@
                 if (m.lat && m.lng) {
                     const marker = L.marker([m.lat, m.lng]).addTo(leafletMap);
                     
+                    // ポップアップのHTML
                     const popupHtml = `
                         <div class="w-48 p-1">
                             ${m.image ? `<img src="${getProxyImageUrl(m.image)}" class="w-full h-28 object-cover rounded-xl mb-3 shadow-sm border border-slate-100" onerror="this.onerror=null; this.style.display='none';">` : ''}
@@ -1041,7 +993,9 @@
                 }
             });
 
+            // ピンがある場合は、すべてのピンが収まるようにズームを調整
             if (bounds.length > 0) {
+                // 少しだけ遅延させないと、タブ切り替え直後にboundsが正しく計算されないことがある
                 setTimeout(() => {
                     leafletMap.invalidateSize();
                     leafletMap.fitBounds(bounds, { padding: [50, 50], maxZoom: 15 });
