@@ -751,9 +751,35 @@
                 const newName = document.getElementById('settingPageName').value.trim();
                 if (!newName) return;
                 const page = pages.find(p => p.id === currentPageId);
+                
+                if (page.name === newName) return; // 変更なしならスキップ
+
                 page.name = newName;
                 await idbKeyval.set('travel_pages', pages);
                 renderPageSelect();
+                
+                if (currentDriveFileId && accessToken) {
+                    const btn = document.getElementById('savePageNameBtn');
+                    const oldText = btn.textContent;
+                    btn.textContent = "同期中...";
+                    btn.disabled = true;
+                    
+                    await pushToDrive(); // JSON内の pageName を更新して送信
+                    
+                    try {
+                        // Driveのファイル名(メタデータ)も同時に更新
+                        const finalFileName = newName.endsWith('.json') ? newName : `${newName}.json`;
+                        await gapi.client.request({
+                            path: '/drive/v3/files/' + currentDriveFileId,
+                            method: 'PATCH',
+                            body: JSON.stringify({ name: finalFileName })
+                        });
+                    } catch (e) { console.error("ファイル名同期エラー", e); }
+                    
+                    btn.textContent = oldText;
+                    btn.disabled = false;
+                }
+
                 showMsg("ページ名を変更しました");
             };
             document.getElementById('settingExportBtn').onclick = exportJsonData;
@@ -934,12 +960,17 @@
                 const result = parseTravelJson(resp.result);
                 allMemos = result.memos;
                 
-                // 必要であればメタデータからページ名も更新
+                // メタデータからページ名を最新に更新 (他の端末で変更された場合用)
                 if (result.name) {
                     const page = pages.find(p => p.id === currentPageId);
-                    if(page) page.name = result.name;
-                    await idbKeyval.set('travel_pages', pages);
-                    renderPageSelect();
+                    if(page && page.name !== result.name) {
+                        page.name = result.name;
+                        await idbKeyval.set('travel_pages', pages);
+                        renderPageSelect();
+                        // 設定モーダルが開いている場合はそこも更新
+                        const settingNameInput = document.getElementById('settingPageName');
+                        if (settingNameInput) settingNameInput.value = result.name;
+                    }
                 }
 
                 await idbKeyval.set(`travelMemos_${currentPageId}`, allMemos);
