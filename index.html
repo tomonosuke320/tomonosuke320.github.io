@@ -68,7 +68,7 @@
                     </div>
                     <div>
                         <h1 class="text-lg font-black text-slate-800 tracking-tight leading-none mb-1">Travel Scrapper</h1>
-                        <p class="text-[10px] text-blue-600 font-bold uppercase tracking-[0.2em]">Web Viewer v3.9</p>
+                        <p class="text-[10px] text-blue-600 font-bold uppercase tracking-[0.2em]">Web Viewer v4.0 Perfect Sync</p>
                     </div>
                 </div>
 
@@ -85,17 +85,21 @@
 
             <div class="flex flex-wrap items-center gap-2">
                 <div class="flex items-center gap-1 p-1 bg-slate-50 rounded-xl border border-slate-100">
-                    <button id="drivePickerBtn" class="flex items-center gap-1.5 px-3 py-2 text-green-700 font-bold text-xs hover:bg-white rounded-lg transition-colors">
-                        <i data-lucide="folder-open" size="16"></i><span>選択</span>
+                    <button id="drivePickerBtn" class="flex items-center gap-1.5 px-3 py-2 text-green-700 font-bold text-xs hover:bg-white rounded-lg transition-colors" title="Googleドライブからファイルを選択">
+                        <i data-lucide="folder-search" size="16"></i><span>選択</span>
                     </button>
                     <div class="w-px h-4 bg-slate-200"></div>
-                    <label for="fileInput" class="flex items-center gap-1.5 px-3 py-2 text-slate-600 font-bold text-xs hover:bg-white rounded-lg transition-colors cursor-pointer" title="ローカルから読み込み">
+                    <label for="fileInput" class="flex items-center gap-1.5 px-3 py-2 text-slate-600 font-bold text-xs hover:bg-white rounded-lg transition-colors cursor-pointer" title="PCから読み込み">
                         <i data-lucide="file-up" size="16"></i><span>読込</span>
                     </label>
                     <input type="file" id="fileInput" accept=".json" class="hidden" />
                     <div class="w-px h-4 bg-slate-200"></div>
-                    <button id="exportJsonBtn" class="flex items-center gap-1.5 px-3 py-2 text-blue-600 font-bold text-xs hover:bg-white rounded-lg transition-colors" title="ローカルに保存">
+                    <button id="exportJsonBtn" class="flex items-center gap-1.5 px-3 py-2 text-slate-500 font-bold text-xs hover:bg-white rounded-lg transition-colors" title="PCに書き出し">
                         <i data-lucide="download" size="16"></i><span>書出</span>
+                    </button>
+                    <div class="w-px h-4 bg-slate-200"></div>
+                    <button id="driveExportBtn" class="flex items-center gap-1.5 px-3 py-2 text-blue-600 font-bold text-xs hover:bg-white rounded-lg transition-colors" title="Googleドライブに新規保存">
+                        <i data-lucide="cloud-upload" size="16"></i><span>Drive保存</span>
                     </button>
                 </div>
                 <div class="flex-1"></div>
@@ -411,7 +415,6 @@
                 listContainer.classList.add('hidden');
                 mapContainer.classList.remove('hidden');
             }
-            // タブを切り替えたら全体を再描画（隠れている裏側も更新するため）
             render();
         }
 
@@ -455,7 +458,6 @@
             }
         }
 
-        // ★ マップ推察 (確実なJSONパース＋保険の正規表現抽出でlat/lngを逃さない)
         async function handleAiMapGeneration() {
             const title = document.getElementById('addTitle').value.trim();
             const url = document.getElementById('addUrl').value.trim();
@@ -475,7 +477,6 @@
             btn.innerHTML = `<i data-lucide="loader-2" class="animate-spin" size="12"></i> 座標と場所を特定中...`;
             if (window.lucide) lucide.createIcons();
 
-            // 必ずJSON形式で緯度経度を含めて返してもらうよう明確に指示
             const sys = `旅行メモの内容から、Googleマップ検索に最適な場所の名称と、地図にピンを立てるための「緯度(lat)」と「経度(lng)」を特定してください。
 必ず以下のJSON形式でのみ出力してください。Markdownの装飾などは一切不要です。
 {"keyword": "具体的な地域名と店舗名(例: 神奈川県横浜市大口 中華そば 高野)", "lat": 35.4925, "lng": 139.6461}`;
@@ -484,8 +485,6 @@
 
             try {
                 const result = await safeCallGemini(user, sys);
-                
-                // 余計な文字を取り除き、確実にJSONとして扱う
                 let jsonStr = result?.trim();
                 jsonStr = jsonStr.replace(/```json/gi, '').replace(/```/g, '').trim();
                 
@@ -493,7 +492,6 @@
                 try {
                     data = JSON.parse(jsonStr);
                 } catch (e) {
-                    // JSONパースが失敗した場合の保険（正規表現で無理やり抽出）
                     const latMatch = jsonStr.match(/"lat"\s*:\s*([0-9.-]+)/);
                     const lngMatch = jsonStr.match(/"lng"\s*:\s*([0-9.-]+)/);
                     const kwdMatch = jsonStr.match(/"keyword"\s*:\s*"([^"]+)"/);
@@ -509,8 +507,6 @@
                 if (data && data.keyword) {
                     mapInput.value = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(data.keyword)}`;
                     document.getElementById('clear_addMapUrl')?.classList.remove('hidden');
-                    
-                    // 緯度経度がある場合のみ保存
                     if (data.lat && data.lng) {
                         latInput.value = data.lat;
                         lngInput.value = data.lng;
@@ -518,7 +514,6 @@
                         latInput.value = "";
                         lngInput.value = "";
                     }
-
                     showMsg("場所と地図のピン座標を特定しました！");
                 } else {
                     showMsg("場所を特定できませんでした。", true);
@@ -574,7 +569,6 @@
             }
         }
 
-        // --- Image File & Paste Handling ---
         function processImageFile(file) {
             if (!file) return;
             const reader = new FileReader();
@@ -587,13 +581,10 @@
                     canvas.width = w; canvas.height = h;
                     canvas.getContext('2d').drawImage(img, 0, 0, w, h);
                     uploadedImageDataUrl = canvas.toDataURL('image/jpeg', 0.8);
-                    
                     const prevImg = document.getElementById('imagePreview');
                     if(prevImg) prevImg.src = uploadedImageDataUrl;
-                    
                     const prevCont = document.getElementById('previewContainer');
                     if(prevCont) prevCont.classList.remove('hidden');
-                    
                     const urlIn = document.getElementById('addImageUrl');
                     if(urlIn) {
                         urlIn.value = ''; 
@@ -608,10 +599,7 @@
 
         function setupImageLogic() {
             const fileIn = document.getElementById('addImageFile');
-            if(fileIn) fileIn.onchange = (e) => {
-                processImageFile(e.target.files[0]);
-            };
-
+            if(fileIn) fileIn.onchange = (e) => processImageFile(e.target.files[0]);
             const clearPrev = document.getElementById('clearPreviewBtn');
             if(clearPrev) clearPrev.onclick = () => {
                 uploadedImageDataUrl = '';
@@ -619,7 +607,6 @@
                 if(prev) prev.classList.add('hidden');
                 document.getElementById('addImageUrl').value = '';
             };
-            
             const urlInput = document.getElementById('addImageUrl');
             if(urlInput) {
                 urlInput.addEventListener('input', (e) => {
@@ -635,16 +622,13 @@
                     }
                 });
             }
-
             document.addEventListener('paste', (e) => {
                 if (document.getElementById('addModal').classList.contains('hidden')) return;
-                
                 const items = (e.clipboardData || e.originalEvent.clipboardData).items;
                 for (let index in items) {
                     const item = items[index];
                     if (item.kind === 'file' && item.type.startsWith('image/')) {
-                        const file = item.getAsFile();
-                        processImageFile(file);
+                        processImageFile(item.getAsFile());
                         e.preventDefault(); 
                         break;
                     }
@@ -652,41 +636,77 @@
             });
         }
 
-        // ★ JSONエクスポート機能
         function exportJsonData() {
-            if (allMemos.length === 0) {
-                showMsg("書き出すデータがありません", true);
-                return;
-            }
-            
+            if (allMemos.length === 0) { showMsg("書き出すデータがありません", true); return; }
             const today = new Date();
             const yyyy = today.getFullYear();
             const mm = String(today.getMonth() + 1).padStart(2, '0');
             const dd = String(today.getDate()).padStart(2, '0');
             const defaultFileName = `travel_memos_${yyyy}${mm}${dd}.json`;
-
-            // ファイル名を入力してもらうプロンプト
             const fileName = prompt("保存するファイル名を入力してください", defaultFileName);
-            if (!fileName) return; // キャンセルされた場合
-
-            // 拡張子が付いていなければ付与する
+            if (!fileName) return;
             const finalFileName = fileName.endsWith('.json') ? fileName : `${fileName}.json`;
-
-            // データをJSON文字列に変換
             const dataStr = JSON.stringify(allMemos, null, 2);
             const blob = new Blob([dataStr], { type: "application/json" });
             const url = URL.createObjectURL(blob);
-            
-            // ダウンロードリンクを生成してクリック
             const a = document.createElement('a');
-            a.href = url;
-            a.download = finalFileName;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-            
+            a.href = url; a.download = finalFileName;
+            document.body.appendChild(a); a.click();
+            document.body.removeChild(a); URL.revokeObjectURL(url);
             showMsg("エクスポートしました");
+        }
+
+        // ★ Googleドライブへの書き出し機能
+        async function handleDriveExport() {
+            if (allMemos.length === 0) { showMsg("書き出すデータがありません", true); return; }
+            
+            // ログインチェック
+            if (!accessToken) {
+                actionAfterAuth = 'saveToDrive';
+                tokenClient.requestAccessToken({prompt: 'consent'});
+                return;
+            }
+
+            const today = new Date();
+            const yyyy = today.getFullYear();
+            const mm = String(today.getMonth() + 1).padStart(2, '0');
+            const dd = String(today.getDate()).padStart(2, '0');
+            const defaultFileName = `travel_memos_${yyyy}${mm}${dd}.json`;
+            const fileName = prompt("Googleドライブに保存するファイル名を入力してください", defaultFileName);
+            if (!fileName) return;
+
+            const finalFileName = fileName.endsWith('.json') ? fileName : `${fileName}.json`;
+
+            try {
+                showMsg("Driveに書き出し中...");
+                const metadata = { name: finalFileName, mimeType: 'application/json' };
+                const content = JSON.stringify(allMemos, null, 2);
+                
+                const boundary = '-------314159265358979323846';
+                const delimiter = "\r\n--" + boundary + "\r\n";
+                const close_delim = "\r\n--" + boundary + "--";
+                const multipartRequestBody = delimiter + 'Content-Type: application/json\r\n\r\n' + JSON.stringify(metadata) + delimiter + 'Content-Type: application/json\r\n\r\n' + content + close_delim;
+
+                const request = gapi.client.request({
+                    path: '/upload/drive/v3/files', method: 'POST',
+                    params: { uploadType: 'multipart' },
+                    headers: { 'Content-Type': 'multipart/related; boundary="' + boundary + '"' },
+                    body: multipartRequestBody
+                });
+
+                const resp = await new Promise((resolve, reject) => {
+                    request.execute(r => r.error ? reject(r.error) : resolve(r));
+                });
+
+                // 新しく作ったファイルを同期対象に設定
+                currentDriveFileId = resp.id;
+                await idbKeyval.set('driveFileId_cache', currentDriveFileId);
+                updateDriveUI();
+                showMsg("Driveに保存し、同期を開始しました");
+            } catch (err) {
+                console.error(err);
+                showMsg("Drive保存に失敗しました", true);
+            }
         }
 
 
@@ -701,60 +721,41 @@
         function initLocalEvents() {
             document.getElementById('fabAdd').onclick = openAddModal;
             document.getElementById('fileInput').onchange = handleLocalFileUpload;
-            // エクスポートボタンのイベントをバインド
-            const exportBtn = document.getElementById('exportJsonBtn');
-            if (exportBtn) exportBtn.onclick = exportJsonData;
+            document.getElementById('exportJsonBtn').onclick = exportJsonData;
+            document.getElementById('driveExportBtn').onclick = handleDriveExport;
 
             document.getElementById('searchInput').oninput = (e) => { searchQuery = e.target.value; render(); };
             const allBtn = document.querySelector('[data-tag="all"]');
             if(allBtn) allBtn.onclick = () => { currentTag = 'all'; render(); };
-            
             document.getElementById('tabListBtn').onclick = () => setViewMode('list');
             document.getElementById('tabMapBtn').onclick = () => setViewMode('map');
-
             document.getElementById('closeAddModalBtn').onclick = () => document.getElementById('addModal').classList.add('hidden');
             document.getElementById('saveNewMemoBtn').onclick = saveMemo;
-            
-            document.getElementById('deleteMemoBtn').onclick = () => {
-                showConfirm("このメモを削除してよろしいですか？", deleteMemo);
-            };
-            document.getElementById('clearDataBtn').onclick = () => {
-                showConfirm("保存されたキャッシュを初期化しますか？(Driveのデータは消えません)", clearAllLocalData);
-            };
-            document.getElementById('logoutBtn').onclick = () => {
-                showConfirm("ログアウトしますか？", logout);
-            };
-
+            document.getElementById('deleteMemoBtn').onclick = () => showConfirm("このメモを削除してよろしいですか？", deleteMemo);
+            document.getElementById('clearDataBtn').onclick = () => showConfirm("保存されたキャッシュを初期化しますか？", clearAllLocalData);
+            document.getElementById('logoutBtn').onclick = () => showConfirm("ログアウトしますか？", logout);
             document.getElementById('driveSyncBtn').onclick = handleSyncClick;
             document.getElementById('drivePickerBtn').onclick = handlePickerClick;
-            
             document.getElementById('generateMapBtn').onclick = handleAiMapGeneration;
             document.getElementById('generateImageBtn').onclick = handleAiImageGeneration;
-
             document.getElementById('openSettingsBtn').onclick = () => document.getElementById('settingsModal').classList.remove('hidden');
             document.getElementById('closeSettingsBtn').onclick = () => document.getElementById('settingsModal').classList.add('hidden');
             document.getElementById('saveSettingsBtn').onclick = async () => {
                 userSetGeminiKey = document.getElementById('geminiApiKeyInput').value.trim();
                 await idbKeyval.set('user_gemini_key', userSetGeminiKey);
                 document.getElementById('settingsModal').classList.add('hidden');
-                updateApiBtnState();
-                showMsg("設定を保存しました");
+                updateApiBtnState(); showMsg("設定を保存しました");
             };
-
-            setupInputClears();
-            setupImageLogic();
+            setupInputClears(); setupImageLogic();
         }
 
         async function loadPersistedState() {
             const cachedMemos = await idbKeyval.get('travelMemos_cache');
             if (cachedMemos) allMemos = cachedMemos;
             currentDriveFileId = await idbKeyval.get('driveFileId_cache');
-            
             userSetGeminiKey = (await idbKeyval.get('user_gemini_key')) || "";
             document.getElementById('geminiApiKeyInput').value = userSetGeminiKey;
-            
             updateApiBtnState();
-
             accessToken = await idbKeyval.get('gapi_access_token');
             const expiry = await idbKeyval.get('gapi_token_expiry');
             if (expiry && Date.now() > parseInt(expiry)) {
@@ -770,7 +771,6 @@
                 await new Promise((resolve) => gapi.load('client:picker', resolve));
                 await gapi.client.init({ apiKey: DRIVE_API_KEY, discoveryDocs: DISCOVERY_DOCS });
                 gapiInited = true;
-
                 tokenClient = google.accounts.oauth2.initTokenClient({
                     client_id: CLIENT_ID, scope: SCOPES,
                     callback: async (resp) => {
@@ -778,11 +778,11 @@
                         await persistToken(resp.access_token);
                         if (actionAfterAuth === 'picker') showPicker();
                         else if (actionAfterAuth === 'sync') fetchDriveMemos(currentDriveFileId);
+                        else if (actionAfterAuth === 'saveToDrive') handleDriveExport();
                         actionAfterAuth = null;
                     },
                 });
                 gisInited = true;
-
                 if (accessToken) {
                     gapi.client.setToken({ access_token: accessToken });
                     updateDriveUI();
@@ -791,7 +791,6 @@
             } catch (err) { console.error("GAPI Init Fail", err); }
         }
 
-        // --- Auth & Sync ---
         async function persistToken(token) {
             accessToken = token;
             gapi.client.setToken({ access_token: token });
@@ -802,16 +801,14 @@
 
         async function logout() {
             accessToken = null;
-            await idbKeyval.del('gapi_access_token');
-            await idbKeyval.del('gapi_token_expiry');
-            updateDriveUI();
-            location.reload();
+            await idbKeyval.del('gapi_access_token'); await idbKeyval.del('gapi_token_expiry');
+            updateDriveUI(); location.reload();
         }
 
         function handleSyncClick() {
             if (!accessToken) { actionAfterAuth = 'sync'; tokenClient.requestAccessToken({prompt: 'consent'}); }
             else if (!currentDriveFileId) { handlePickerClick(); }
-            else { fetchDriveMemos(currentDriveFileId); }
+            else fetchDriveMemos(currentDriveFileId);
         }
 
         function handlePickerClick() {
@@ -827,8 +824,7 @@
                     if (data.action === google.picker.Action.PICKED) {
                         currentDriveFileId = data.docs[0].id; 
                         await idbKeyval.set('driveFileId_cache', currentDriveFileId);
-                        updateDriveUI();
-                        fetchDriveMemos(currentDriveFileId); 
+                        updateDriveUI(); fetchDriveMemos(currentDriveFileId); 
                     }
                 }).build();
             picker.setVisible(true);
@@ -838,12 +834,10 @@
             const btnText = document.getElementById('driveSyncText');
             const iconWrapper = document.getElementById('syncIconWrapper');
             const syncBtn = document.getElementById('driveSyncBtn');
-            
             if (btnText) btnText.textContent = "同期中...";
             if (iconWrapper) iconWrapper.innerHTML = '<i data-lucide="refresh-cw" size="18" class="animate-spin"></i>';
             if (syncBtn) syncBtn.className = "flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm shadow-lg bg-green-500 text-white shadow-green-200 transition-all";
             if (window.lucide) lucide.createIcons();
-            
             try {
                 const resp = await gapi.client.drive.files.get({ fileId: fileId, alt: 'media' });
                 let data = resp.result;
@@ -851,17 +845,13 @@
                 if (Array.isArray(data)) {
                     allMemos = data;
                     await idbKeyval.set('travelMemos_cache', allMemos);
-                    render();
-                    showMsg("Driveから同期しました");
+                    render(); showMsg("Driveから同期しました");
                 }
             } catch (e) {
                 if (e.status === 401 || e.status === 403) {
-                    accessToken = null; 
-                    showMsg("再ログインが必要です。チェックボックスを忘れずに。", true);
+                    accessToken = null; showMsg("再ログインが必要です。", true);
                 }
-            } finally {
-                updateDriveUI();
-            }
+            } finally { updateDriveUI(); }
         }
 
         async function pushToDrive() {
@@ -872,37 +862,31 @@
                     method: 'PATCH', params: { uploadType: 'media' }, body: JSON.stringify(allMemos, null, 2)
                 });
                 await new Promise((resolve, reject) => request.execute(r => {
-                    if (r && r.error) reject(r.error);
-                    else resolve(r);
+                    if (r && r.error) reject(r.error); else resolve(r);
                 }));
                 return true;
             } catch (err) {
                 if (err.code === 403 || err.status === 403) {
                     showMsg("保存権限エラー：再ログインし「すべてのファイルの表示...」にチェックを入れてください。", true);
                     accessToken = null; updateDriveUI();
-                } else {
-                    showMsg("同期エラーが発生しました", true);
-                }
+                } else { showMsg("同期エラーが発生しました", true); }
                 return false;
             }
         }
 
-        // --- UI Operations ---
         function openAddModal() {
             editingMemoId = null;
             document.getElementById('modalTitle').textContent = '新しく場所を追加';
             document.getElementById('saveBtnText').textContent = '追加する';
             ['addTitle', 'addUrl', 'addMapUrl', 'addLat', 'addLng', 'addText', 'addTags', 'addImageUrl'].forEach(id => {
-                const el = document.getElementById(id);
-                if(el) el.value = '';
+                const el = document.getElementById(id); if(el) el.value = '';
             });
             uploadedImageDataUrl = '';
             const preview = document.getElementById('previewContainer');
             if(preview) preview.classList.add('hidden');
             const delBtn = document.getElementById('deleteMemoBtn');
             if(delBtn) delBtn.classList.add('hidden'); 
-            renderTagHints();
-            document.getElementById('addModal').classList.remove('hidden');
+            renderTagHints(); document.getElementById('addModal').classList.remove('hidden');
             refreshClearBtns();
         }
 
@@ -910,61 +894,37 @@
             const titleInput = document.getElementById('addTitle');
             const title = titleInput.value.trim();
             if (!title) { titleInput.focus(); return; }
-
             const btn = document.getElementById('saveNewMemoBtn');
             const btnText = document.getElementById('saveBtnText');
             btn.disabled = true; if(btnText) btnText.textContent = '保存中...';
-
             const preview = document.getElementById('previewContainer');
-            const image = (preview && !preview.classList.contains('hidden')) 
-                        ? (uploadedImageDataUrl || document.getElementById('addImageUrl').value.trim()) : null;
-
+            const image = (preview && !preview.classList.contains('hidden')) ? (uploadedImageDataUrl || document.getElementById('addImageUrl').value.trim()) : null;
             const latStr = document.getElementById('addLat').value;
             const lngStr = document.getElementById('addLng').value;
-
             const newMemo = {
                 id: editingMemoId || "m-" + Date.now(),
-                title: title,
-                url: document.getElementById('addUrl').value.trim(),
+                title: title, url: document.getElementById('addUrl').value.trim(),
                 mapUrl: document.getElementById('addMapUrl').value.trim(),
-                lat: latStr ? parseFloat(latStr) : null,
-                lng: lngStr ? parseFloat(lngStr) : null,
+                lat: latStr ? parseFloat(latStr) : null, lng: lngStr ? parseFloat(lngStr) : null,
                 text: document.getElementById('addText').value.trim(),
-                image: image,
-                tags: document.getElementById('addTags').value.split(',').map(t => t.trim()).filter(t => t),
+                image: image, tags: document.getElementById('addTags').value.split(',').map(t => t.trim()).filter(t => t),
                 timestamp: new Date().toISOString()
             };
-
             const oldMemos = [...allMemos];
             if (editingMemoId) {
-                const idx = allMemos.findIndex(m => m.id === editingMemoId);
-                if (idx > -1) allMemos[idx] = newMemo;
-            } else {
-                allMemos.unshift(newMemo);
-            }
-            
+                const idx = allMemos.findIndex(m => m.id === editingMemoId); if (idx > -1) allMemos[idx] = newMemo;
+            } else { allMemos.unshift(newMemo); }
             let success = true;
             if (currentDriveFileId && accessToken) {
-                const syncBtnText = document.getElementById('driveSyncText');
-                const syncIconWrapper = document.getElementById('syncIconWrapper');
                 const syncBtn = document.getElementById('driveSyncBtn');
-                if(syncBtnText) syncBtnText.textContent = "保存中...";
-                if(syncIconWrapper) syncIconWrapper.innerHTML = '<i data-lucide="refresh-cw" size="18" class="animate-spin"></i>';
                 if (syncBtn) syncBtn.className = "flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm shadow-lg bg-green-500 text-white shadow-green-200 transition-all";
-                if (window.lucide) lucide.createIcons();
-
-                success = await pushToDrive();
-                updateDriveUI(); 
+                success = await pushToDrive(); updateDriveUI(); 
             }
-
             if (success) {
                 await idbKeyval.set('travelMemos_cache', allMemos);
                 document.getElementById('addModal').classList.add('hidden');
-                render();
-                showMsg("保存しました");
-            } else {
-                allMemos = oldMemos;
-            }
+                render(); showMsg("保存しました");
+            } else { allMemos = oldMemos; }
             btn.disabled = false; if(btnText) btnText.textContent = editingMemoId ? '上書き保存' : '追加する';
         }
 
@@ -972,24 +932,11 @@
             const old = [...allMemos];
             allMemos = allMemos.filter(m => m.id !== editingMemoId);
             let success = true;
-            if (currentDriveFileId && accessToken) {
-                const syncBtnText = document.getElementById('driveSyncText');
-                const syncIconWrapper = document.getElementById('syncIconWrapper');
-                const syncBtn = document.getElementById('driveSyncBtn');
-                if(syncBtnText) syncBtnText.textContent = "削除中...";
-                if(syncIconWrapper) syncIconWrapper.innerHTML = '<i data-lucide="refresh-cw" size="18" class="animate-spin"></i>';
-                if (syncBtn) syncBtn.className = "flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm shadow-lg bg-red-500 text-white shadow-red-200 transition-all";
-                if (window.lucide) lucide.createIcons();
-
-                success = await pushToDrive();
-                updateDriveUI(); 
-            }
-
+            if (currentDriveFileId && accessToken) { success = await pushToDrive(); updateDriveUI(); }
             if (success) {
                 await idbKeyval.set('travelMemos_cache', allMemos);
                 document.getElementById('addModal').classList.add('hidden');
-                render();
-                showMsg("削除しました");
+                render(); showMsg("削除しました");
             } else { allMemos = old; }
         }
 
@@ -1003,17 +950,10 @@
 
         function render() {
             refreshFilterTags();
-            
-            // ★ リスト表示用のDOMは、現在マップ表示中であっても裏側で常に最新の状態に更新しておく
             const container = document.getElementById('memoContainer');
             const filtered = getFilteredMemos();
-
             if (allMemos.length === 0) {
-                container.innerHTML = `
-                    <div class="col-span-full py-32 flex flex-col items-center text-center px-10 text-slate-400">
-                        <i data-lucide="plane" size="48" class="mb-4 opacity-20"></i>
-                        <p class="font-medium">データがありません。<br>同期するか右下の＋ボタンで追加してください。</p>
-                    </div>`;
+                container.innerHTML = `<div class="col-span-full py-32 flex flex-col items-center text-center px-10 text-slate-400"><i data-lucide="plane" size="48" class="mb-4 opacity-20"></i><p class="font-medium">データがありません。<br>同期するか追加してください。</p></div>`;
             } else {
                 container.innerHTML = filtered.map(m => `
                     <div class="memo-item bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm flex flex-col hover:shadow-xl transition-all duration-300">
@@ -1022,18 +962,10 @@
                             <h3 class="font-black text-slate-800 mb-3 text-base leading-snug">${m.title}</h3>
                             ${m.text ? `<div class="bg-blue-50/40 text-blue-900 text-[13px] p-4 rounded-2xl mb-4 whitespace-pre-wrap leading-relaxed shadow-inner font-medium">${m.text}</div>` : ''}
                             <div class="flex flex-wrap gap-1.5 mb-5">${(m.tags || []).map(t => `<span class="px-2.5 py-1 bg-slate-100 text-slate-500 text-[10px] rounded-lg font-black uppercase">#${t}</span>`).join('')}</div>
-                            
                             <div class="flex flex-wrap gap-2 mb-4">
-                                ${m.url ? `
-                                <button onclick="window.open('${m.url}', '_blank')" class="flex-1 min-w-[90px] bg-blue-50 text-blue-600 text-[11px] font-black py-2.5 rounded-xl border border-blue-100 hover:bg-blue-100 flex items-center justify-center gap-1.5 transition-colors">
-                                    <i data-lucide="globe" size="14"></i>公式サイト
-                                </button>` : ''}
-                                ${m.mapUrl ? `
-                                <button onclick="window.open('${m.mapUrl}', '_blank')" class="flex-1 min-w-[90px] bg-green-50 text-green-600 text-[11px] font-black py-2.5 rounded-xl border border-green-100 hover:bg-green-100 flex items-center justify-center gap-1.5 transition-colors">
-                                    <i data-lucide="map-pin" size="14"></i>マップ表示
-                                </button>` : ''}
+                                ${m.url ? `<button onclick="window.open('${m.url}', '_blank')" class="flex-1 min-w-[90px] bg-blue-50 text-blue-600 text-[11px] font-black py-2.5 rounded-xl border border-blue-100 hover:bg-blue-100 flex items-center justify-center gap-1.5 transition-colors"><i data-lucide="globe" size="14"></i>公式サイト</button>` : ''}
+                                ${m.mapUrl ? `<button onclick="window.open('${m.mapUrl}', '_blank')" class="flex-1 min-w-[90px] bg-green-50 text-green-600 text-[11px] font-black py-2.5 rounded-xl border border-green-100 hover:bg-green-100 flex items-center justify-center gap-1.5 transition-colors"><i data-lucide="map-pin" size="14"></i>マップ表示</button>` : ''}
                             </div>
-
                             <div class="flex justify-between items-center pt-4 border-t border-slate-50 mt-auto">
                                 <span class="text-[9px] text-slate-300 font-black uppercase tracking-tighter">${m.timestamp ? new Date(m.timestamp).toLocaleDateString() : ''}</span>
                                 <button onclick="window.editMemo('${m.id}')" class="text-slate-400 hover:text-blue-600 transition-colors p-1"><i data-lucide="pencil" size="16"></i></button>
@@ -1042,65 +974,33 @@
                     </div>
                 `).join('');
             }
-
             if (window.lucide) lucide.createIcons();
-
-            // ★ マップ表示モードの場合はマップも再描画する
-            if (viewMode === 'map') {
-                renderMap();
-            }
+            if (viewMode === 'map') renderMap();
         }
 
         function renderMap() {
             if (!leafletMap) {
                 leafletMap = L.map('mapView').setView([35.681236, 139.767125], 5);
-                L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-                    attribution: '© <a href="https://www.openstreetmap.org/copyright">OSM</a> contributors'
-                }).addTo(leafletMap);
+                L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { attribution: '© OSM contributors' }).addTo(leafletMap);
             }
-
-            mapMarkers.forEach(m => leafletMap.removeLayer(m));
-            mapMarkers = [];
-
+            mapMarkers.forEach(m => leafletMap.removeLayer(m)); mapMarkers = [];
             const filtered = getFilteredMemos();
             let bounds = [];
-
             filtered.forEach(m => {
                 if (m.lat && m.lng) {
                     const marker = L.marker([m.lat, m.lng]).addTo(leafletMap);
-                    
-                    const popupHtml = `
-                        <div class="w-48 p-1">
-                            ${m.image ? `<img src="${getProxyImageUrl(m.image)}" class="w-full h-28 object-cover rounded-xl mb-3 shadow-sm border border-slate-100" onerror="this.onerror=null; this.style.display='none';">` : ''}
-                            <h4 class="font-black text-slate-800 text-sm mb-3 leading-snug">${m.title}</h4>
-                            <div class="flex gap-2">
-                                <button onclick="window.editMemo('${m.id}')" class="flex-1 text-[10px] bg-blue-50 text-blue-600 py-1.5 rounded-lg font-bold border border-blue-100 hover:bg-blue-100 transition-colors">編集</button>
-                                ${m.mapUrl ? `<a href="${m.mapUrl}" target="_blank" class="flex-1 text-[10px] bg-green-50 text-green-600 py-1.5 rounded-lg font-bold border border-green-100 hover:bg-green-100 transition-colors block text-center">経路</a>` : ''}
-                            </div>
-                        </div>
-                    `;
-                    marker.bindPopup(popupHtml);
-                    mapMarkers.push(marker);
-                    bounds.push([m.lat, m.lng]);
+                    marker.bindPopup(`<div class="w-48 p-1">${m.image ? `<img src="${getProxyImageUrl(m.image)}" class="w-full h-28 object-cover rounded-xl mb-3 border border-slate-100">` : ''}<h4 class="font-black text-slate-800 text-sm mb-3">${m.title}</h4><div class="flex gap-2"><button onclick="window.editMemo('${m.id}')" class="flex-1 text-[10px] bg-blue-50 text-blue-600 py-1.5 rounded-lg font-bold border border-blue-100">編集</button>${m.mapUrl ? `<a href="${m.mapUrl}" target="_blank" class="flex-1 text-[10px] bg-green-50 text-green-600 py-1.5 rounded-lg font-bold border border-green-100 text-center block">経路</a>` : ''}</div></div>`);
+                    mapMarkers.push(marker); bounds.push([m.lat, m.lng]);
                 }
             });
-
-            if (bounds.length > 0) {
-                setTimeout(() => {
-                    leafletMap.invalidateSize();
-                    leafletMap.fitBounds(bounds, { padding: [50, 50], maxZoom: 15 });
-                }, 100);
-            } else {
-                setTimeout(() => leafletMap.invalidateSize(), 100);
-            }
+            if (bounds.length > 0) setTimeout(() => { leafletMap.invalidateSize(); leafletMap.fitBounds(bounds, { padding: [50, 50], maxZoom: 15 }); }, 100);
+            else setTimeout(() => leafletMap.invalidateSize(), 100);
         }
 
         window.editMemo = (id) => {
             const memo = allMemos.find(m => m.id === id); if (!memo) return;
-            editingMemoId = id;
-            document.getElementById('modalTitle').textContent = '編集';
-            const saveText = document.getElementById('saveBtnText');
-            if(saveText) saveText.textContent = '上書き保存';
+            editingMemoId = id; document.getElementById('modalTitle').textContent = '編集';
+            const saveText = document.getElementById('saveBtnText'); if(saveText) saveText.textContent = '上書き保存';
             document.getElementById('addTitle').value = memo.title || '';
             document.getElementById('addUrl').value = memo.url || '';
             document.getElementById('addMapUrl').value = memo.mapUrl || '';
@@ -1108,33 +1008,21 @@
             document.getElementById('addLng').value = memo.lng || '';
             document.getElementById('addText').value = memo.text || '';
             document.getElementById('addTags').value = (memo.tags || []).join(', ');
-            
             uploadedImageDataUrl = '';
             const preview = document.getElementById('previewContainer');
             const imgPreview = document.getElementById('imagePreview');
-            const imgUrl = document.getElementById('addImageUrl');
-            
             if (memo.image) {
                 if(imgPreview) imgPreview.src = getProxyImageUrl(memo.image);
                 if(preview) preview.classList.remove('hidden');
                 if (memo.image.startsWith('data:')) uploadedImageDataUrl = memo.image;
-                else if(imgUrl) imgUrl.value = memo.image;
-            } else { 
-                if(preview) preview.classList.add('hidden'); 
-            }
-            
-            const delBtn = document.getElementById('deleteMemoBtn');
-            if(delBtn) delBtn.classList.remove('hidden'); 
-            renderTagHints(); 
-            document.getElementById('addModal').classList.remove('hidden');
-            refreshClearBtns();
+            } else { if(preview) preview.classList.add('hidden'); }
+            const delBtn = document.getElementById('deleteMemoBtn'); if(delBtn) delBtn.classList.remove('hidden'); 
+            renderTagHints(); document.getElementById('addModal').classList.remove('hidden'); refreshClearBtns();
         }
 
-        // --- Helpers ---
         function setupInputClears() {
             ['addTitle', 'addUrl', 'addMapUrl', 'addText', 'addImageUrl', 'addTags'].forEach(id => {
-                const input = document.getElementById(id);
-                const btn = document.getElementById(`clear_${id}`);
+                const input = document.getElementById(id); const btn = document.getElementById(`clear_${id}`);
                 if (!input || !btn) return;
                 input.oninput = () => btn.classList.toggle('hidden', input.value.length === 0);
                 btn.onclick = () => { input.value = ''; btn.classList.add('hidden'); input.focus(); if(id==='addTags') refreshTagHintStyles(); };
@@ -1143,8 +1031,7 @@
 
         function refreshClearBtns() {
             ['addTitle', 'addUrl', 'addMapUrl', 'addText', 'addImageUrl', 'addTags'].forEach(id => {
-                const el = document.getElementById(id);
-                const btn = document.getElementById('clear_'+id);
+                const el = document.getElementById(id); const btn = document.getElementById('clear_'+id);
                 if(el && btn) btn.classList.toggle('hidden', el.value.length === 0);
             });
         }
@@ -1152,19 +1039,17 @@
         function refreshFilterTags() {
             const tags = new Set(); allMemos.forEach(m => (m.tags || []).forEach(t => tags.add(t)));
             document.querySelectorAll('.dynamic-tag').forEach(c => c.remove());
-            const list = document.getElementById('tagList');
-            if(!list) return;
+            const list = document.getElementById('tagList'); if(!list) return;
             Array.from(tags).sort().forEach(tag => {
                 const btn = document.createElement('button');
-                btn.className = `dynamic-tag px-5 py-2 rounded-full text-[11px] font-black transition-all ${currentTag === tag ? 'bg-blue-600 text-white shadow-lg shadow-blue-100' : 'bg-white border border-slate-200 text-slate-500 hover:border-blue-300'}`;
+                btn.className = `dynamic-tag px-5 py-2 rounded-full text-[11px] font-black transition-all ${currentTag === tag ? 'bg-blue-600 text-white shadow-lg' : 'bg-white border border-slate-200 text-slate-500 hover:border-blue-300'}`;
                 btn.textContent = tag; btn.onclick = () => { currentTag = tag; render(); };
                 list.appendChild(btn);
             });
         }
 
         function renderTagHints() {
-            const container = document.getElementById('existingTagsContainer');
-            if(!container) return;
+            const container = document.getElementById('existingTagsContainer'); if(!container) return;
             container.innerHTML = '';
             const tags = new Set(); allMemos.forEach(m => (m.tags || []).forEach(t => tags.add(t)));
             Array.from(tags).sort().forEach(tag => {
@@ -1183,8 +1068,7 @@
         }
 
         function refreshTagHintStyles() {
-            const input = document.getElementById('addTags');
-            if(!input) return;
+            const input = document.getElementById('addTags'); if(!input) return;
             const cur = input.value.split(',').map(t => t.trim());
             document.querySelectorAll('#existingTagsContainer button').forEach(btn => {
                 const tag = btn.textContent.replace('#', '');
@@ -1200,29 +1084,20 @@
                 try {
                     const data = JSON.parse(ev.target.result);
                     if (Array.isArray(data)) {
-                        allMemos = data; 
-                        currentDriveFileId = null;
-                        await idbKeyval.set('travelMemos_cache', allMemos);
-                        await idbKeyval.del('driveFileId_cache');
-                        updateDriveUI(); render();
-                        showMsg("ローカルから読み込みました");
+                        allMemos = data; currentDriveFileId = null;
+                        await idbKeyval.set('travelMemos_cache', allMemos); await idbKeyval.del('driveFileId_cache');
+                        updateDriveUI(); render(); showMsg("ローカルから読み込みました");
                     }
                 } catch (err) { showMsg("JSON読み込み失敗", true); }
             };
             reader.readAsText(file);
         }
 
-        async function clearAllLocalData() {
-            await idbKeyval.clear(); location.reload();
-        }
-
+        async function clearAllLocalData() { await idbKeyval.clear(); location.reload(); }
         window.openLightbox = (src) => { 
-            const img = document.getElementById('lightboxImg');
-            if(img) img.src = getProxyImageUrl(src); 
-            const box = document.getElementById('lightbox');
-            if(box) box.classList.remove('hidden'); 
+            const img = document.getElementById('lightboxImg'); if(img) img.src = getProxyImageUrl(src); 
+            const box = document.getElementById('lightbox'); if(box) box.classList.remove('hidden'); 
         };
-
         window.addEventListener('load', init);
     </script>
 </body>
