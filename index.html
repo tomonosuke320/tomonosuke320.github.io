@@ -7,21 +7,15 @@
     
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2003/svg' viewBox='0 0 24 24' fill='none' stroke='%232563eb' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M17.8 19.2L16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z'/></svg>">
 
-    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
-    <!-- IndexedDB Library -->
     <script src="https://cdn.jsdelivr.net/npm/idb-keyval@6/dist/umd.js"></script>
-    <!-- Google API Loader -->
     <script async defer src="https://apis.google.com/js/api.js"></script>
     <script async defer src="https://accounts.google.com/gsi/client"></script>
     
-    <!-- Leaflet CSS & JS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-    <!-- config.js -->
     <script src="config.js" onerror="console.warn('config.js が見つかりません。')"></script>
 
     <style>
@@ -53,10 +47,8 @@
 </head>
 <body class="text-slate-900 pb-20">
 
-    <!-- トースト通知エリア -->
     <div id="toastContainer" class="fixed bottom-20 left-1/2 transform -translate-x-1/2 z-[9999] flex flex-col gap-2 pointer-events-none"></div>
 
-    <!-- カスタム確認ダイアログ -->
     <div id="confirmModal" class="fixed inset-0 z-[200] hidden flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
         <div class="bg-white rounded-[2rem] p-6 max-w-xs w-full shadow-2xl modal-enter">
             <p id="confirmMsg" class="text-slate-800 font-black mb-6 text-center text-sm leading-relaxed"></p>
@@ -67,7 +59,6 @@
         </div>
     </div>
 
-    <!-- ナビゲーションバー -->
     <nav class="bg-white/90 backdrop-blur-md border-b border-slate-200 sticky top-0 z-40 shadow-sm">
         <div class="max-w-6xl mx-auto px-4 py-3">
             <div class="flex justify-between items-center mb-4">
@@ -77,7 +68,7 @@
                     </div>
                     <div>
                         <h1 class="text-lg font-black text-slate-800 tracking-tight leading-none mb-1">Travel Scrapper</h1>
-                        <p class="text-[10px] text-blue-600 font-bold uppercase tracking-[0.2em]">Web Viewer v3.5 Perfect</p>
+                        <p class="text-[10px] text-blue-600 font-bold uppercase tracking-[0.2em]">Web Viewer v3.6 Fixed</p>
                     </div>
                 </div>
 
@@ -85,7 +76,6 @@
                     <button id="openSettingsBtn" class="p-2 transition-colors rounded-xl text-slate-400 bg-slate-50 hover:scale-105" title="AI機能の設定">
                         <i data-lucide="bot" size="20"></i>
                     </button>
-                    <!-- Drive同期ボタン -->
                     <button id="driveSyncBtn" class="flex items-center gap-2 px-5 py-2.5 bg-slate-600 text-white rounded-xl font-bold text-sm shadow-lg shadow-slate-200 hover:bg-slate-700 active:scale-95 transition-all">
                         <span id="syncIconWrapper" class="inline-block"><i data-lucide="cloud" size="18"></i></span>
                         <span id="driveSyncText">Drive連携</span>
@@ -117,7 +107,6 @@
         </div>
     </nav>
 
-    <!-- 検索バー & タブ切り替え -->
     <div class="max-w-6xl mx-auto px-4 mt-6">
         <div class="bg-white p-4 md:p-6 rounded-3xl border border-slate-200 shadow-sm flex flex-col gap-4">
             
@@ -142,7 +131,6 @@
         </div>
     </div>
 
-    <!-- メイン表示 (リスト表示用) -->
     <main id="memoContainer" class="max-w-6xl mx-auto px-4 mt-8 memo-grid">
         <div class="col-span-full py-32 flex flex-col items-center text-center px-10 text-slate-400">
             <i data-lucide="plane" size="48" class="mb-4 opacity-20"></i>
@@ -150,7 +138,6 @@
         </div>
     </main>
 
-    <!-- メイン表示 (マップ表示用) -->
     <div id="mapContainerWrapper" class="max-w-6xl mx-auto px-4 mt-8 hidden">
         <div id="mapView" class="border border-slate-200 shadow-sm overflow-hidden"></div>
         <p class="text-xs text-slate-400 font-medium text-center mt-3">
@@ -158,12 +145,10 @@
         </p>
     </div>
 
-    <!-- 追加ボタン -->
     <button id="fabAdd" class="fixed bottom-6 right-6 w-14 h-14 bg-blue-600 text-white rounded-full shadow-lg shadow-blue-300 flex items-center justify-center hover:bg-blue-700 active:scale-90 transition-transform z-50">
         <i data-lucide="plus" size="28"></i>
     </button>
 
-    <!-- 追加・編集モーダル -->
     <div id="addModal" class="fixed inset-0 z-[60] hidden flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
         <div class="bg-white w-full max-w-md rounded-[2.5rem] p-6 shadow-2xl modal-enter max-h-[90vh] overflow-y-auto no-scrollbar">
             <div class="flex justify-between items-center mb-6">
@@ -211,7 +196,6 @@
                         <input type="url" id="addMapUrl" class="w-full pl-4 pr-10 py-3 bg-green-50/50 border border-green-100 rounded-2xl focus:ring-2 focus:ring-green-500 outline-none text-sm text-green-800 font-medium" placeholder="タイトルやURLから正確な場所を探します">
                         <button type="button" id="clear_addMapUrl" class="absolute right-3 top-1/2 -translate-y-1/2 text-green-300 hidden"><i data-lucide="x-circle" size="18"></i></button>
                     </div>
-                    <!-- マップピン用の隠しフィールド -->
                     <input type="hidden" id="addLat" value="">
                     <input type="hidden" id="addLng" value="">
                 </div>
@@ -221,7 +205,6 @@
                         <label class="block text-xs font-black text-slate-500 uppercase tracking-widest flex items-center gap-1">
                             画像 <span class="text-[9px] font-medium text-slate-400 normal-case">(ペーストで一発登録)</span>
                         </label>
-                        <!-- ★ 単純に検索を開くだけのボタン -->
                         <button type="button" id="generateImageBtn" class="text-[10px] font-bold bg-indigo-600 text-white px-3 py-1.5 rounded-lg hover:bg-indigo-700 transition-all flex items-center gap-1 shadow-md shadow-indigo-200">
                             <i data-lucide="search" size="12"></i> 画像検索を開く
                         </button>
@@ -265,7 +248,6 @@
         </div>
     </div>
 
-    <!-- AI設定モーダル -->
     <div id="settingsModal" class="fixed inset-0 z-[70] hidden flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
         <div class="bg-white w-full max-w-sm rounded-[2rem] p-6 shadow-2xl modal-enter">
             <h2 class="text-lg font-black text-slate-800 mb-4 flex items-center gap-2">
@@ -297,7 +279,6 @@
         </div>
     </div>
 
-    <!-- ライトボックス -->
     <div id="lightbox" class="fixed inset-0 z-[100] hidden bg-black/95 flex items-center justify-center p-4 cursor-zoom-out" onclick="this.classList.add('hidden')">
         <img id="lightboxImg" src="" class="max-w-full max-h-full rounded shadow-2xl transition-transform duration-300" />
     </div>
@@ -429,7 +410,6 @@
             }
         }
 
-        // ★ 完全な安定性を誇る v2.6ベースのAI通信ロジック + 確実なリトライ
         async function safeCallGemini(userQuery, systemInstruction) {
             const keyToUse = userSetGeminiKey || apiKey || "";
             const modelName = userSetGeminiKey ? "gemini-2.5-flash" : "gemini-2.5-flash-preview-09-2025";
@@ -470,7 +450,6 @@
             }
         }
 
-        // ★ マップ推察 (エラーの起きないテキストベース + 座標の安全な取得)
         async function handleAiMapGeneration() {
             const title = document.getElementById('addTitle').value.trim();
             const url = document.getElementById('addUrl').value.trim();
@@ -490,24 +469,20 @@
             btn.innerHTML = `<i data-lucide="loader-2" class="animate-spin" size="12"></i> 場所を特定中...`;
             if (window.lucide) lucide.createIcons();
 
-            // 安定していたv2.6と同じプロンプトに戻し、JSONエラーを根絶
             const sys = `旅行メモの内容から、Googleマップ検索に最適な場所の名称を1つ特定してください。出力は「検索キーワードのみ」とし、挨拶などは一切不要です。`;
             const user = `タイトル: ${title}\nURL: ${url}\nメモ: ${memoText}`;
 
             try {
                 const result = await safeCallGemini(user, sys);
-                // AIの返答からキーワードだけを抽出
                 const keyword = result?.trim().replace(/[*#`\n\{\}"]/g, '');
 
                 if (keyword && keyword.length > 0 && keyword.length < 100) {
                     mapInput.value = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(keyword)}`;
                     document.getElementById('clear_addMapUrl')?.classList.remove('hidden');
                     
-                    // JSONパースのエラーを避けるため、座標は安全な正規表現かデフォルトで空にする
                     latInput.value = "";
                     lngInput.value = "";
 
-                    // AIからの不安定なJSON抽出をやめ、正規表現で確実に座標を抜き出す（もしAIが気を利かせて出した場合）
                     const latMatch = result.match(/"lat":\s*([0-9.]+)/);
                     const lngMatch = result.match(/"lng":\s*([0-9.]+)/);
                     if(latMatch && lngMatch) {
@@ -528,7 +503,6 @@
             }
         }
 
-        // ★ 画像検索 (自動挿入なし・検索を開くだけのシンプル版)
         async function handleAiImageGeneration() {
             const title = document.getElementById('addTitle').value.trim();
             const url = document.getElementById('addUrl').value.trim();
@@ -545,7 +519,6 @@
             btn.innerHTML = `<i data-lucide="loader-2" class="animate-spin" size="12"></i> 検索キーワード生成中...`;
             if (window.lucide) lucide.createIcons();
 
-            // プロンプトを極限までシンプルにし、エラーの原因になる記号を排除しました
             const sys = "旅行先情報から写真を探すための検索キーワードを作成してください。出力はキーワードのみとしてください。";
             const user = `タイトル: ${title}\nURL: ${url}\nメモ: ${memoText}`;
 
@@ -558,7 +531,6 @@
                     if (win) {
                         showMsg("画像検索を開きました。画像をコピーしてペーストしてください！");
                     } else {
-                        // ブラウザのポップアップブロックに引っかかった場合の対応
                         showMsg(`ポップアップがブロックされました。「${keyword}」で検索してください。`, true);
                     }
                 } else {
@@ -725,7 +697,8 @@
         async function initGoogleServices() {
             if (!CONFIG_READY) return;
             try {
-                await new Promise((resolve) => gapi.load('client', resolve));
+                // ★ ここを client から client:picker に変更しました！
+                await new Promise((resolve) => gapi.load('client:picker', resolve));
                 await gapi.client.init({ apiKey: DRIVE_API_KEY, discoveryDocs: DISCOVERY_DOCS });
                 gapiInited = true;
 
@@ -1013,7 +986,7 @@
             if (!leafletMap) {
                 leafletMap = L.map('mapView').setView([35.681236, 139.767125], 5);
                 L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> contributors'
+                    attribution: '© <a href="https://www.openstreetmap.org/copyright">OSM</a> contributors'
                 }).addTo(leafletMap);
             }
 
