@@ -451,13 +451,20 @@
                     });
                     
                     if (!response.ok) {
-                        throw new Error(`HTTP error ${response.status}`);
+                        let errMsg = `HTTP error ${response.status}`;
+                        try {
+                            const errData = await response.json();
+                            if(errData.error && errData.error.message) {
+                                errMsg += ` (${errData.error.message})`;
+                            }
+                        } catch(e) {}
+                        throw new Error(errMsg);
                     }
 
                     const result = await response.json();
                     return result.candidates?.[0]?.content?.parts?.[0]?.text;
                 } catch (err) {
-                    if (i === 4) throw new Error("通信に失敗しました。時間をおいてお試しください。");
+                    if (i === 4) throw new Error(`通信失敗: ${err.message}`);
                     await new Promise(r => setTimeout(r, delays[i]));
                 }
             }
@@ -538,16 +545,22 @@
             btn.innerHTML = `<i data-lucide="loader-2" class="animate-spin" size="12"></i> 検索キーワード生成中...`;
             if (window.lucide) lucide.createIcons();
 
-            const sys = "入力された旅行先（店舗や観光地）の写真をGoogle画像検索で探すための、最も精度の高いキーワードを生成してください。出力はキーワードのみ。地域名や店名を具体的に含めてください（例: '横浜 大口 中華そば高野 ラーメン'）。";
+            // プロンプトを極限までシンプルにし、エラーの原因になる記号を排除しました
+            const sys = "旅行先情報から写真を探すための検索キーワードを作成してください。出力はキーワードのみとしてください。";
             const user = `タイトル: ${title}\nURL: ${url}\nメモ: ${memoText}`;
 
             try {
                 const result = await safeCallGemini(user, sys);
-                const keyword = result?.trim().replace(/[*#]/g, '');
+                const keyword = result?.trim().replace(/[*#`\n\{\}"]/g, '');
                 
                 if (keyword) {
-                    window.open(`https://www.google.com/search?tbm=isch&q=${encodeURIComponent(keyword)}`, '_blank');
-                    showMsg("画像検索を開きました。画像をコピーしてペーストしてください！");
+                    const win = window.open(`https://www.google.com/search?tbm=isch&q=${encodeURIComponent(keyword)}`, '_blank');
+                    if (win) {
+                        showMsg("画像検索を開きました。画像をコピーしてペーストしてください！");
+                    } else {
+                        // ブラウザのポップアップブロックに引っかかった場合の対応
+                        showMsg(`ポップアップがブロックされました。「${keyword}」で検索してください。`, true);
+                    }
                 } else {
                     showMsg("キーワードを生成できませんでした。", true);
                 }
@@ -1172,5 +1185,3 @@
     </script>
 </body>
 </html>
-
-
