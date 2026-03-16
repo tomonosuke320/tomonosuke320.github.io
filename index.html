@@ -77,7 +77,7 @@
                     </div>
                     <div>
                         <h1 class="text-lg font-black text-slate-800 tracking-tight leading-none mb-1">Travel Scrapper</h1>
-                        <p class="text-[10px] text-blue-600 font-bold uppercase tracking-[0.2em]">Web Viewer v3.7</p>
+                        <p class="text-[10px] text-blue-600 font-bold uppercase tracking-[0.2em]">Web Viewer v3.8</p>
                     </div>
                 </div>
 
@@ -425,8 +425,9 @@
                 btnList.className = "flex-1 sm:flex-none px-6 py-2.5 rounded-xl text-sm font-bold transition-all text-slate-500 hover:text-slate-800 flex items-center justify-center gap-2";
                 listContainer.classList.add('hidden');
                 mapContainer.classList.remove('hidden');
-                renderMap();
             }
+            // タブを切り替えたら全体を再描画（隠れている裏側も更新するため）
+            render();
         }
 
         async function safeCallGemini(userQuery, systemInstruction) {
@@ -976,11 +977,8 @@
 
         function render() {
             refreshFilterTags();
-            if (viewMode === 'map') {
-                renderMap();
-                return;
-            }
-
+            
+            // ★ リスト表示用のDOMは、現在マップ表示中であっても裏側で常に最新の状態に更新しておく
             const container = document.getElementById('memoContainer');
             const filtered = getFilteredMemos();
 
@@ -990,38 +988,41 @@
                         <i data-lucide="plane" size="48" class="mb-4 opacity-20"></i>
                         <p class="font-medium">データがありません。<br>同期するか右下の＋ボタンで追加してください。</p>
                     </div>`;
-                if (window.lucide) lucide.createIcons();
-                return;
-            }
+            } else {
+                container.innerHTML = filtered.map(m => `
+                    <div class="memo-item bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm flex flex-col hover:shadow-xl transition-all duration-300">
+                        ${m.image ? `<img src="${getProxyImageUrl(m.image)}" class="w-full h-auto cursor-zoom-in block" onclick="window.openLightbox('${m.image}')" loading="lazy" onerror="this.onerror=null; this.src='${m.image}';">` : ''}
+                        <div class="p-5 flex-1 flex flex-col">
+                            <h3 class="font-black text-slate-800 mb-3 text-base leading-snug">${m.title}</h3>
+                            ${m.text ? `<div class="bg-blue-50/40 text-blue-900 text-[13px] p-4 rounded-2xl mb-4 whitespace-pre-wrap leading-relaxed shadow-inner font-medium">${m.text}</div>` : ''}
+                            <div class="flex flex-wrap gap-1.5 mb-5">${(m.tags || []).map(t => `<span class="px-2.5 py-1 bg-slate-100 text-slate-500 text-[10px] rounded-lg font-black uppercase">#${t}</span>`).join('')}</div>
+                            
+                            <div class="flex flex-wrap gap-2 mb-4">
+                                ${m.url ? `
+                                <button onclick="window.open('${m.url}', '_blank')" class="flex-1 min-w-[90px] bg-blue-50 text-blue-600 text-[11px] font-black py-2.5 rounded-xl border border-blue-100 hover:bg-blue-100 flex items-center justify-center gap-1.5 transition-colors">
+                                    <i data-lucide="globe" size="14"></i>公式サイト
+                                </button>` : ''}
+                                ${m.mapUrl ? `
+                                <button onclick="window.open('${m.mapUrl}', '_blank')" class="flex-1 min-w-[90px] bg-green-50 text-green-600 text-[11px] font-black py-2.5 rounded-xl border border-green-100 hover:bg-green-100 flex items-center justify-center gap-1.5 transition-colors">
+                                    <i data-lucide="map-pin" size="14"></i>マップ表示
+                                </button>` : ''}
+                            </div>
 
-            container.innerHTML = filtered.map(m => `
-                <div class="memo-item bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm flex flex-col hover:shadow-xl transition-all duration-300">
-                    ${m.image ? `<img src="${getProxyImageUrl(m.image)}" class="w-full h-auto cursor-zoom-in block" onclick="window.openLightbox('${m.image}')" loading="lazy" onerror="this.onerror=null; this.src='${m.image}';">` : ''}
-                    <div class="p-5 flex-1 flex flex-col">
-                        <h3 class="font-black text-slate-800 mb-3 text-base leading-snug">${m.title}</h3>
-                        ${m.text ? `<div class="bg-blue-50/40 text-blue-900 text-[13px] p-4 rounded-2xl mb-4 whitespace-pre-wrap leading-relaxed shadow-inner font-medium">${m.text}</div>` : ''}
-                        <div class="flex flex-wrap gap-1.5 mb-5">${(m.tags || []).map(t => `<span class="px-2.5 py-1 bg-slate-100 text-slate-500 text-[10px] rounded-lg font-black uppercase">#${t}</span>`).join('')}</div>
-                        
-                        <div class="flex flex-wrap gap-2 mb-4">
-                            ${m.url ? `
-                            <button onclick="window.open('${m.url}', '_blank')" class="flex-1 min-w-[90px] bg-blue-50 text-blue-600 text-[11px] font-black py-2.5 rounded-xl border border-blue-100 hover:bg-blue-100 flex items-center justify-center gap-1.5 transition-colors">
-                                <i data-lucide="globe" size="14"></i>公式サイト
-                            </button>` : ''}
-                            ${m.mapUrl ? `
-                            <button onclick="window.open('${m.mapUrl}', '_blank')" class="flex-1 min-w-[90px] bg-green-50 text-green-600 text-[11px] font-black py-2.5 rounded-xl border border-green-100 hover:bg-green-100 flex items-center justify-center gap-1.5 transition-colors">
-                                <i data-lucide="map-pin" size="14"></i>マップ表示
-                            </button>` : ''}
-                        </div>
-
-                        <div class="flex justify-between items-center pt-4 border-t border-slate-50 mt-auto">
-                            <span class="text-[9px] text-slate-300 font-black uppercase tracking-tighter">${m.timestamp ? new Date(m.timestamp).toLocaleDateString() : ''}</span>
-                            <button onclick="window.editMemo('${m.id}')" class="text-slate-400 hover:text-blue-600 transition-colors p-1"><i data-lucide="pencil" size="16"></i></button>
+                            <div class="flex justify-between items-center pt-4 border-t border-slate-50 mt-auto">
+                                <span class="text-[9px] text-slate-300 font-black uppercase tracking-tighter">${m.timestamp ? new Date(m.timestamp).toLocaleDateString() : ''}</span>
+                                <button onclick="window.editMemo('${m.id}')" class="text-slate-400 hover:text-blue-600 transition-colors p-1"><i data-lucide="pencil" size="16"></i></button>
+                            </div>
                         </div>
                     </div>
-                </div>
-            `).join('');
+                `).join('');
+            }
 
             if (window.lucide) lucide.createIcons();
+
+            // ★ マップ表示モードの場合はマップも再描画する
+            if (viewMode === 'map') {
+                renderMap();
+            }
         }
 
         function renderMap() {
