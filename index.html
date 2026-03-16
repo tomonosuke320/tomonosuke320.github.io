@@ -187,9 +187,14 @@
                 <div class="pt-2 border-t border-slate-100">
                     <label class="block text-[10px] font-black text-slate-500 mb-1.5 uppercase tracking-widest">Googleドライブ連携</label>
                     <p id="settingDriveStatus" class="text-[11px] text-slate-500 mb-2 font-bold px-1"></p>
-                    <button id="settingDrivePickerBtn" class="w-full flex items-center justify-center gap-2 py-3 bg-blue-50 text-blue-600 border border-blue-200 rounded-xl font-bold hover:bg-blue-100 transition-colors text-sm shadow-sm">
-                        <i data-lucide="folder-search" size="18"></i>ドライブからファイルを選択
-                    </button>
+                    <div class="flex gap-2">
+                        <button id="settingDrivePickerFolderBtn" class="flex-1 flex items-center justify-center gap-1 py-3 bg-blue-50 text-blue-600 border border-blue-200 rounded-xl font-bold hover:bg-blue-100 transition-colors text-xs shadow-sm">
+                            <i data-lucide="folder-search" size="14"></i>フォルダから探す
+                        </button>
+                        <button id="settingDrivePickerFlatBtn" class="flex-1 flex items-center justify-center gap-1 py-3 bg-blue-50 text-blue-600 border border-blue-200 rounded-xl font-bold hover:bg-blue-100 transition-colors text-xs shadow-sm">
+                            <i data-lucide="list" size="14"></i>全ファイル一覧
+                        </button>
+                    </div>
                 </div>
 
                 <div class="pt-2 border-t border-slate-100">
@@ -248,9 +253,14 @@
                     <label class="block text-[10px] font-black text-slate-500 mb-2 uppercase tracking-widest">2. 既存のファイルから追加</label>
                     <div class="flex flex-col gap-2">
                         <!-- ドライブから開く -->
-                        <button id="createNewFromDriveBtn" class="w-full flex items-center justify-center gap-2 py-3 bg-blue-50 text-blue-600 border border-blue-200 rounded-xl font-bold hover:bg-blue-100 transition-colors text-sm shadow-sm">
-                            <i data-lucide="cloud" size="18"></i>ドライブから開く
-                        </button>
+                        <div class="flex gap-2">
+                            <button id="createNewFromDriveFolderBtn" class="flex-1 flex items-center justify-center gap-1 py-3 bg-blue-50 text-blue-600 border border-blue-200 rounded-xl font-bold hover:bg-blue-100 transition-colors text-xs shadow-sm">
+                                <i data-lucide="folder-search" size="16"></i>フォルダから探す
+                            </button>
+                            <button id="createNewFromDriveFlatBtn" class="flex-1 flex items-center justify-center gap-1 py-3 bg-blue-50 text-blue-600 border border-blue-200 rounded-xl font-bold hover:bg-blue-100 transition-colors text-xs shadow-sm">
+                                <i data-lucide="list" size="16"></i>全ファイル一覧
+                            </button>
+                        </div>
                         <!-- ローカルから開く -->
                         <label class="w-full flex items-center justify-center gap-2 py-3 bg-slate-50 text-slate-600 border border-slate-200 rounded-xl font-bold hover:bg-white cursor-pointer transition-colors text-sm shadow-sm">
                             <i data-lucide="folder-open" size="18"></i>ローカルから開く
@@ -797,12 +807,20 @@
             };
             
             // ★ モード切替付きのPicker連携
-            document.getElementById('settingDrivePickerBtn').onclick = () => {
-                pickerMode = 'linkCurrent';
+            document.getElementById('settingDrivePickerFolderBtn').onclick = () => {
+                pickerMode = 'linkCurrentFolder';
                 handlePickerClick();
             };
-            document.getElementById('createNewFromDriveBtn').onclick = () => {
-                pickerMode = 'newPage';
+            document.getElementById('settingDrivePickerFlatBtn').onclick = () => {
+                pickerMode = 'linkCurrentFlat';
+                handlePickerClick();
+            };
+            document.getElementById('createNewFromDriveFolderBtn').onclick = () => {
+                pickerMode = 'newPageFolder';
+                handlePickerClick();
+            };
+            document.getElementById('createNewFromDriveFlatBtn').onclick = () => {
+                pickerMode = 'newPageFlat';
                 handlePickerClick();
             };
 
@@ -909,11 +927,11 @@
             if (!accessToken) { 
                 actionAfterAuth = 'sync'; 
                 // もし現在のページが連携されていなければ、モードを設定してピッカーへ
-                if (!currentDriveFileId) pickerMode = 'linkCurrent';
+                if (!currentDriveFileId) pickerMode = 'linkCurrentFolder';
                 tokenClient.requestAccessToken({prompt: 'consent'}); 
             }
             else if (!currentDriveFileId) {
-                pickerMode = 'linkCurrent';
+                pickerMode = 'linkCurrentFolder';
                 handlePickerClick();
             }
             else fetchDriveMemos(currentDriveFileId);
@@ -933,9 +951,16 @@
                     .setSelectFolderEnabled(true)
                     .setMimeTypes('application/vnd.google-apps.folder');
                 title = "保存先フォルダを選択してください";
+            } else if (pickerMode === 'linkCurrentFlat' || pickerMode === 'newPageFlat') {
+                view = new google.picker.DocsView(google.picker.ViewId.DOCS)
+                    .setIncludeFolders(false) // ★ フォルダを表示せずフラットに
+                    .setMimeTypes('application/json');
+                title = "旅行メモを選択（全ファイル一覧）";
             } else {
-                view = new google.picker.DocsView(google.picker.ViewId.DOCS).setMimeTypes('application/json');
-                title = "旅行メモのファイルを選択してください";
+                view = new google.picker.DocsView(google.picker.ViewId.DOCS)
+                    .setIncludeFolders(true) // ★ フォルダを表示して中に入れるようにする
+                    .setMimeTypes('application/json');
+                title = "旅行メモを選択（フォルダから探す）";
             }
 
             const picker = new google.picker.PickerBuilder()
@@ -953,7 +978,7 @@
                             const pageName = sessionStorage.getItem('pendingPageName') || '新しい旅行';
                             sessionStorage.removeItem('pendingPageName');
                             await executeCreateNewDrivePage(pageName, folderId);
-                        } else if (pickerMode === 'newPage') {
+                        } else if (pickerMode.startsWith('newPage')) {
                             // ★ ドライブのファイルを「新しいページ」として追加
                             const fileName = file.name.replace('.json', '');
                             document.getElementById('newPageModal').classList.add('hidden');
