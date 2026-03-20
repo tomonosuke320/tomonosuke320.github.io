@@ -76,7 +76,7 @@
                         <i data-lucide="send" size="26"></i>
                     </div>
                     <div>
-                        <h1 class="text-lg font-black text-slate-800 tracking-tight leading-none mb-1">Travel Scrapper <span class="text-xs font-bold text-slate-400 ml-1">v1.8</span></h1>
+                        <h1 class="text-lg font-black text-slate-800 tracking-tight leading-none mb-1">Travel Scrapper <span class="text-xs font-bold text-slate-400 ml-1">v1.9</span></h1>
                         
                         <div class="flex items-center mt-1">
                             <select id="pageSelect" class="bg-blue-50 text-blue-700 font-black text-[11px] px-2.5 py-1 rounded-lg border border-blue-100 outline-none cursor-pointer appearance-none pr-6 relative hover:bg-blue-100 transition-colors shadow-sm" style="background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2216%22%20height%3D%2216%22%20fill%3D%22none%22%20stroke%3D%22%232563eb%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%224%206%208%2010%2012%206%22%2F%3E%3C%2Fsvg%3E'); background-repeat: no-repeat; background-position: right 4px center;">
@@ -222,7 +222,7 @@
                             <i data-lucide="list" size="14"></i>全ファイル一覧
                         </button>
                     </div>
-                    <!-- ★ 強制リセットボタンを追加 -->
+                    <!-- 強制リセットボタン -->
                     <button id="forceResetTokenBtn" class="w-full flex items-center justify-center gap-1 py-2 bg-slate-100 text-slate-500 border border-slate-200 rounded-lg font-bold hover:bg-slate-200 transition-colors text-[10px]">
                         <i data-lucide="refresh-cw" size="12"></i> ログイン状態を強制リセット（エラー時用）
                     </button>
@@ -348,8 +348,8 @@
                     </div>
                 </div>
                 
-                <div id="addMapArea" class="pt-2">
-                    <div class="flex justify-between items-center mb-1.5 ml-1">
+                <div id="addMapArea" class="pt-2 border-t border-slate-100">
+                    <div class="flex justify-between items-center mb-1.5 ml-1 pt-2">
                         <label class="block text-[10px] font-black text-green-600 uppercase tracking-widest flex items-center gap-1">
                             <i data-lucide="map-pin" size="12"></i> Googleマップ表示用
                         </label>
@@ -725,6 +725,7 @@
             }
         }
 
+        // ★ タイトルとメモのAI生成を独立し、プロンプトを強化
         async function handleAiTitleGeneration() {
             if (!hasApiKey()) {
                 showMsg("AI機能を利用するにはAPIキーを設定してください", true);
@@ -743,12 +744,13 @@
             btn.innerHTML = `<i data-lucide="loader-2" class="animate-spin" size="12"></i> 抽出中...`;
             if (window.lucide) lucide.createIcons();
             
-            const sys = `あなたは情報整理のプロフェッショナルです。提供されたURLをGoogle検索などを用いて分析し、適切なタイトルを生成してください。
+            const sys = `あなたは情報抽出のプロフェッショナルです。提供されたURLの「メインコンテンツ」を分析し、最適なタイトルを生成してください。
+サイドバー、広告、おすすめ記事など、メインテーマと関係ない情報は絶対に無視してください。
 必ず以下のJSON形式でのみ出力してください。
-{"title": "サイトや特定の場所の正確な名称"}`;
-            let user = `以下のURLについて調べて、タイトルを抽出してください。\nURL: ${url}`;
+{"title": "サイトのメインテーマや特定の場所・料理の正確な名称"}`;
+            let user = `以下のURLのメインコンテンツについて調べて、タイトルを抽出してください。\nURL: ${url}`;
             if (memoText) {
-                user += `\n\nまた、すでに以下のメモが入力されています。もしURL先がまとめ記事など複数の場所を紹介しているページの場合は、このメモの内容に合致する「特定の場所や店舗の名前」をタイトルとして抽出してください。\nメモ: ${memoText}`;
+                user += `\n\n【重要】\nすでに以下のメモが入力されています:\n${memoText}\n\nもしURL先が複数のコンテンツを紹介しているページ（まとめ記事など）の場合は、このメモの内容に最も合致する「特定の場所、店舗、料理の名前」をタイトルとして抽出してください。`;
             }
             
             try {
@@ -791,13 +793,22 @@
             btn.innerHTML = `<i data-lucide="loader-2" class="animate-spin" size="12"></i> 要約中...`;
             if (window.lucide) lucide.createIcons();
             
-            const sys = `あなたは情報整理のプロフェッショナルです。提供されたURLをGoogle検索などを用いて分析し、要約テキストを生成してください。
-施設なら【営業時間】【料金】、レストランなら【営業時間】【予約可否】などを箇条書きで分かりやすくまとめること。
+            const sys = `あなたは情報整理のプロフェッショナルです。提供されたURLの「メインコンテンツ」のみを分析し、要約テキストを生成してください。
+サイドバー、おすすめ記事、他のページへのリンク、広告などの無関係な情報は絶対に無視してください。
+
+【ジャンル別の要約フォーマット】
+- 料理レシピ: そのURLで紹介されているメインの料理の【材料】と【作り方の手順】を正確に箇条書きでまとめる（別のレシピは絶対に混ぜないこと）。
+- 施設/観光地: 【営業時間】【料金】【アクセス】などをまとめる。
+- 飲食店: 【営業時間】【予約可否】【おすすめメニュー】などをまとめる。
+- まとめ記事: 全体の概要、または指定されたタイトルに関連する部分のみをピックアップする。
+
 必ず以下のJSON形式でのみ出力してください。
 {"memo": "要約テキスト"}`;
-            let user = `以下のURLについて調べて、情報を抽出・要約してください。\nURL: ${url}`;
+            let user = `以下のURLのメインコンテンツを調べて、情報を抽出・要約してください。\nURL: ${url}`;
             if (title) {
-                user += `\n\nまた、すでに以下のタイトルが入力されています。もしURL先が複数の場所を紹介しているまとめ記事などの場合は、ページ全体ではなく、この「${title}」に関する部分の内容だけを抽出してまとめてください。\nタイトル: ${title}`;
+                user += `\n\n【重要】\nすでに以下のタイトルが入力されています: 「${title}」\nページ内に複数のコンテンツ（まとめ記事など）がある場合は、このタイトルに関連する部分の内容だけを抽出してください。\n関係のない別の店舗や別のレシピの情報は絶対に含めないでください。`;
+            } else {
+                user += `\n\n【重要】\n指定されたURLのメインとなる主題（一番大きく扱われている料理や店舗など）についてのみ要約してください。別の記事へのリンク内容は無視してください。`;
             }
             
             try {
@@ -948,7 +959,6 @@
                 render();
             } catch (e) {
                 console.error("初期化エラー（復旧を試みます）", e);
-                // 致命的なエラー時は最低限のデータで起動させる
                 pages = [{ id: 'default', name: 'エラー復旧ノート', mapEnabled: true }];
                 currentPageId = 'default';
                 allMemos = [];
@@ -1040,7 +1050,6 @@
                 });
             };
             
-            // ★ 強制リセットボタンの処理
             document.getElementById('forceResetTokenBtn').onclick = async () => {
                 await clearAuthToken();
                 showMsg("ログイン状態を強制リセットしました。再度連携ボタンを押してください。");
@@ -1081,6 +1090,7 @@
             
             document.getElementById('driveSyncBtn').onclick = handleSyncClick;
             
+            // ★ AIボタンのイベント紐付け
             document.getElementById('generateTitleBtn').onclick = handleAiTitleGeneration;
             document.getElementById('generateMemoBtn').onclick = handleAiMemoGeneration;
             document.getElementById('generateMapBtn').onclick = handleAiMapGeneration;
@@ -1100,7 +1110,6 @@
             setupInputClears(); setupImageLogic();
         }
 
-        // ★ エラーに強い読み込み処理
         async function loadPersistedState() {
             try {
                 pages = await idbKeyval.get('travel_pages') || [];
@@ -1126,11 +1135,9 @@
                 document.getElementById('geminiApiKeyInput').value = userSetGeminiKey;
                 updateApiBtnState();
                 
-                // ★ トークンチェック処理の安全化
                 accessToken = await idbKeyval.get('gapi_access_token');
                 const expiry = await idbKeyval.get('gapi_token_expiry');
                 if (accessToken && expiry) {
-                    // 数値に変換できない異常値の場合は無視する
                     const expiryTime = parseInt(expiry);
                     if (!isNaN(expiryTime) && Date.now() > expiryTime) {
                         await clearAuthToken(); 
@@ -1138,13 +1145,13 @@
                 }
             } catch (error) {
                 console.error("データ読み込み時にエラーが発生しました", error);
-                throw error; // 上位のtry-catchに投げる
+                throw error; 
             }
         }
 
         async function loadCurrentPageData() {
             const page = pages.find(p => p.id === currentPageId);
-            if (!page) return; // 安全策
+            if (!page) return;
             currentDriveFileId = page.driveFileId;
             allMemos = (await idbKeyval.get(`travelMemos_${currentPageId}`)) || [];
             updateMapFeatureVisibility();
