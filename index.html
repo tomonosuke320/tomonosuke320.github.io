@@ -76,7 +76,7 @@
                         <i data-lucide="send" size="26"></i>
                     </div>
                     <div>
-                        <h1 class="text-lg font-black text-slate-800 tracking-tight leading-none mb-1">Travel Scrapper <span class="text-xs font-bold text-slate-400 ml-1">v1.7</span></h1>
+                        <h1 class="text-lg font-black text-slate-800 tracking-tight leading-none mb-1">Travel Scrapper <span class="text-xs font-bold text-slate-400 ml-1">v1.7.1</span></h1>
                         
                         <div class="flex items-center mt-1">
                             <select id="pageSelect" class="bg-blue-50 text-blue-700 font-black text-[11px] px-2.5 py-1 rounded-lg border border-blue-100 outline-none cursor-pointer appearance-none pr-6 relative hover:bg-blue-100 transition-colors shadow-sm" style="background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2216%22%20height%3D%2216%22%20fill%3D%22none%22%20stroke%3D%22%232563eb%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%224%206%208%2010%2012%206%22%2F%3E%3C%2Fsvg%3E'); background-repeat: no-repeat; background-position: right 4px center;">
@@ -165,7 +165,7 @@
         <i data-lucide="plus" size="28"></i>
     </button>
 
-    <!-- ★ メモ詳細（ポップアップ）モーダル -->
+    <!-- メモ詳細（ポップアップ）モーダル -->
     <div id="memoViewModal" class="fixed inset-0 z-[80] hidden flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
         <div class="bg-white w-full max-w-md rounded-[2.5rem] p-6 shadow-2xl modal-enter max-h-[90vh] flex flex-col">
             <div class="flex justify-between items-start mb-4 gap-4">
@@ -214,7 +214,7 @@
                 <div class="pt-2 border-t border-slate-100">
                     <label class="block text-[10px] font-black text-slate-500 mb-1.5 uppercase tracking-widest">Googleドライブ連携</label>
                     <p id="settingDriveStatus" class="text-[11px] text-slate-500 mb-2 font-bold px-1"></p>
-                    <div class="flex gap-2">
+                    <div class="flex gap-2 mb-2">
                         <button id="settingDrivePickerFolderBtn" class="flex-1 flex items-center justify-center gap-1 py-3 bg-blue-50 text-blue-600 border border-blue-200 rounded-xl font-bold hover:bg-blue-100 transition-colors text-xs shadow-sm">
                             <i data-lucide="folder-search" size="14"></i>フォルダから探す
                         </button>
@@ -222,6 +222,10 @@
                             <i data-lucide="list" size="14"></i>全ファイル一覧
                         </button>
                     </div>
+                    <!-- ★ 強制リセットボタンを追加 -->
+                    <button id="forceResetTokenBtn" class="w-full flex items-center justify-center gap-1 py-2 bg-slate-100 text-slate-500 border border-slate-200 rounded-lg font-bold hover:bg-slate-200 transition-colors text-[10px]">
+                        <i data-lucide="refresh-cw" size="12"></i> ログイン状態を強制リセット（エラー時用）
+                    </button>
                 </div>
 
                 <div class="pt-2 border-t border-slate-100">
@@ -803,7 +807,12 @@
                 let data = JSON.parse(jsonStr);
                 if (data && data.keyword) {
                     mapInput.value = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(data.keyword)}`;
-                btn.innerHTML = originalInner;
+                    document.getElementById('clear_addMapUrl')?.classList.remove('hidden');
+                    if (data.lat && data.lng) { latInput.value = data.lat; lngInput.value = data.lng; }
+                    showMsg("座標を特定しました！");
+                }
+            } catch (err) { showMsg("特定に失敗しました", true); } finally {
+                btn.classList.remove('btn-loading'); btn.innerHTML = originalInner;
                 if (window.lucide) lucide.createIcons();
             }
         }
@@ -886,10 +895,21 @@
 
         // --- Core Lifecycle ---
         async function init() {
-            initLocalEvents();
-            await loadPersistedState();
-            await initGoogleServices();
-            render();
+            try {
+                await loadPersistedState();
+                initLocalEvents();
+                await initGoogleServices();
+                render();
+            } catch (e) {
+                console.error("初期化エラー（復旧を試みます）", e);
+                // 致命的なエラー時は最低限のデータで起動させる
+                pages = [{ id: 'default', name: 'エラー復旧ノート', mapEnabled: true }];
+                currentPageId = 'default';
+                allMemos = [];
+                initLocalEvents();
+                render();
+                showMsg("一部のデータを読み込めませんでした。設定からリセットをお試しください。", true);
+            }
         }
 
         function initLocalEvents() {
@@ -898,8 +918,8 @@
             });
             document.getElementById('openPageSettingsBtn').onclick = () => {
                 const page = pages.find(p => p.id === currentPageId);
-                document.getElementById('settingPageName').value = page.name;
-                document.getElementById('settingMapToggle').checked = page.mapEnabled !== false;
+                document.getElementById('settingPageName').value = page ? page.name : '';
+                document.getElementById('settingMapToggle').checked = page ? (page.mapEnabled !== false) : true;
                 updateDriveUI(); 
                 document.getElementById('pageSettingsModal').classList.remove('hidden');
             };
@@ -974,6 +994,13 @@
                 });
             };
             
+            // ★ 強制リセットボタンの処理
+            document.getElementById('forceResetTokenBtn').onclick = async () => {
+                await clearAuthToken();
+                showMsg("ログイン状態を強制リセットしました。再度連携ボタンを押してください。");
+                document.getElementById('pageSettingsModal').classList.add('hidden');
+            };
+
             document.getElementById('settingDrivePickerFolderBtn').onclick = () => { pickerMode = 'linkCurrentFolder'; handlePickerClick(); };
             document.getElementById('settingDrivePickerFlatBtn').onclick = () => { pickerMode = 'linkCurrentFlat'; handlePickerClick(); };
             document.getElementById('createNewFromDriveFolderBtn').onclick = () => { pickerMode = 'newPageFolder'; handlePickerClick(); };
@@ -1021,40 +1048,56 @@
                 updateApiBtnState(); showMsg("保存しました");
             };
             
-            // ★ メモ詳細モーダルを閉じる処理
             document.getElementById('closeMemoViewBtn').onclick = () => document.getElementById('memoViewModal').classList.add('hidden');
 
             setupInputClears(); setupImageLogic();
         }
 
+        // ★ エラーに強い読み込み処理
         async function loadPersistedState() {
-            pages = await idbKeyval.get('travel_pages');
-            currentPageId = await idbKeyval.get('travel_current_page');
-            if (!pages || pages.length === 0) {
-                const oldMemos = await idbKeyval.get('travelMemos_cache');
-                const oldDriveId = await idbKeyval.get('driveFileId_cache');
-                pages = [{ id: 'default', name: 'マイノート', driveFileId: oldDriveId || null, mapEnabled: true }];
-                currentPageId = 'default';
-                await idbKeyval.set('travel_pages', pages);
-                await idbKeyval.set('travel_current_page', currentPageId);
-                if (oldMemos) await idbKeyval.set(`travelMemos_default`, oldMemos);
-            }
-            if (!pages.find(p => p.id === currentPageId)) currentPageId = pages[0].id;
-            await loadCurrentPageData();
-            
-            userSetGeminiKey = (await idbKeyval.get('user_gemini_key')) || "";
-            document.getElementById('geminiApiKeyInput').value = userSetGeminiKey;
-            updateApiBtnState();
-            
-            accessToken = await idbKeyval.get('gapi_access_token');
-            const expiry = await idbKeyval.get('gapi_token_expiry');
-            if (expiry && Date.now() > parseInt(expiry)) {
-                await clearAuthToken(); 
+            try {
+                pages = await idbKeyval.get('travel_pages') || [];
+                currentPageId = await idbKeyval.get('travel_current_page');
+                
+                if (!pages || pages.length === 0) {
+                    const oldMemos = await idbKeyval.get('travelMemos_cache');
+                    const oldDriveId = await idbKeyval.get('driveFileId_cache');
+                    pages = [{ id: 'default', name: 'マイノート', driveFileId: oldDriveId || null, mapEnabled: true }];
+                    currentPageId = 'default';
+                    await idbKeyval.set('travel_pages', pages);
+                    await idbKeyval.set('travel_current_page', currentPageId);
+                    if (oldMemos) await idbKeyval.set(`travelMemos_default`, oldMemos);
+                }
+                
+                if (!pages.find(p => p.id === currentPageId)) {
+                    currentPageId = pages[0].id;
+                }
+                
+                await loadCurrentPageData();
+                
+                userSetGeminiKey = (await idbKeyval.get('user_gemini_key')) || "";
+                document.getElementById('geminiApiKeyInput').value = userSetGeminiKey;
+                updateApiBtnState();
+                
+                // ★ トークンチェック処理の安全化
+                accessToken = await idbKeyval.get('gapi_access_token');
+                const expiry = await idbKeyval.get('gapi_token_expiry');
+                if (accessToken && expiry) {
+                    // 数値に変換できない異常値の場合は無視する
+                    const expiryTime = parseInt(expiry);
+                    if (!isNaN(expiryTime) && Date.now() > expiryTime) {
+                        await clearAuthToken(); 
+                    }
+                }
+            } catch (error) {
+                console.error("データ読み込み時にエラーが発生しました", error);
+                throw error; // 上位のtry-catchに投げる
             }
         }
 
         async function loadCurrentPageData() {
             const page = pages.find(p => p.id === currentPageId);
+            if (!page) return; // 安全策
             currentDriveFileId = page.driveFileId;
             allMemos = (await idbKeyval.get(`travelMemos_${currentPageId}`)) || [];
             updateMapFeatureVisibility();
@@ -1092,7 +1135,9 @@
                     updateDriveUI();
                     if (currentDriveFileId) fetchDriveMemos(currentDriveFileId);
                 }
-            } catch (err) {}
+            } catch (err) {
+                console.error("GoogleAPI初期化エラー", err);
+            }
         }
 
         function handleSyncClick() {
@@ -1319,7 +1364,6 @@
             });
         }
 
-        // ★ メモ詳細ポップアップを開く関数
         window.openMemoModal = (id) => {
             const memo = allMemos.find(m => m.id === id);
             if (!memo) return;
@@ -1327,7 +1371,6 @@
             document.getElementById('memoViewContent').textContent = memo.text || 'テキストがありません。';
             document.getElementById('memoViewModal').classList.remove('hidden');
             
-            // 読んだあとすぐに編集できるようにボタンにIDを紐付け
             document.getElementById('memoViewEditBtn').onclick = () => {
                 document.getElementById('memoViewModal').classList.add('hidden');
                 window.editMemo(id);
@@ -1353,7 +1396,6 @@
             if (allMemos.length === 0) {
                 container.innerHTML = `<div class="col-span-full py-32 text-center text-slate-400">データがありません</div>`;
             } else {
-                // ★ line-clamp-4 と「メモ詳細」ボタンを追加
                 container.innerHTML = filtered.map(m => `
                     <div class="memo-item bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm flex flex-col hover:shadow-xl transition-all duration-300">
                         ${m.image ? `<img src="${getProxyImageUrl(m.image)}" class="w-full h-auto cursor-zoom-in block" onclick="window.openLightbox('${m.image}')" loading="lazy">` : ''}
@@ -1389,7 +1431,6 @@
             filtered.forEach(m => {
                 if (m.lat && m.lng) {
                     const marker = L.marker([m.lat, m.lng]).addTo(leafletMap);
-                    // ★ マップのポップアップにも「メモ詳細」ボタンを追加
                     marker.bindPopup(`<div class="w-48 p-1">
                         <h4 class="font-black text-slate-800 text-sm mb-3">${m.title}</h4>
                         <div class="flex gap-1">
@@ -1557,6 +1598,5 @@
     </script>
 </body>
 </html>
-
 
 
