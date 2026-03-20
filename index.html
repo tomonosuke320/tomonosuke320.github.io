@@ -76,7 +76,7 @@
                         <i data-lucide="send" size="26"></i>
                     </div>
                     <div>
-                        <h1 class="text-lg font-black text-slate-800 tracking-tight leading-none mb-1">Travel Scrapper <span class="text-xs font-bold text-slate-400 ml-1">v1.6</span></h1>
+                        <h1 class="text-lg font-black text-slate-800 tracking-tight leading-none mb-1">Travel Scrapper <span class="text-xs font-bold text-slate-400 ml-1">v1.5</span></h1>
                         
                         <div class="flex items-center mt-1">
                             <select id="pageSelect" class="bg-blue-50 text-blue-700 font-black text-[11px] px-2.5 py-1 rounded-lg border border-blue-100 outline-none cursor-pointer appearance-none pr-6 relative hover:bg-blue-100 transition-colors shadow-sm" style="background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2216%22%20height%3D%2216%22%20fill%3D%22none%22%20stroke%3D%22%232563eb%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%224%206%208%2010%2012%206%22%2F%3E%3C%2Fsvg%3E'); background-repeat: no-repeat; background-position: right 4px center;">
@@ -164,22 +164,6 @@
     <button id="fabAdd" class="fixed bottom-6 right-6 w-14 h-14 bg-blue-600 text-white rounded-full shadow-lg shadow-blue-300 flex items-center justify-center hover:bg-blue-700 active:scale-90 transition-transform z-50">
         <i data-lucide="plus" size="28"></i>
     </button>
-
-    <!-- ★ メモ詳細（ポップアップ）モーダル -->
-    <div id="memoViewModal" class="fixed inset-0 z-[80] hidden flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-        <div class="bg-white w-full max-w-md rounded-[2.5rem] p-6 shadow-2xl modal-enter max-h-[90vh] flex flex-col">
-            <div class="flex justify-between items-start mb-4 gap-4">
-                <h2 id="memoViewTitle" class="text-xl font-black text-slate-800 tracking-tight leading-snug"></h2>
-                <button id="closeMemoViewBtn" class="text-slate-400 hover:text-slate-600 transition-colors shrink-0 p-1 bg-slate-100 rounded-full"><i data-lucide="x" size="20"></i></button>
-            </div>
-            <div class="overflow-y-auto no-scrollbar">
-                <div id="memoViewContent" class="whitespace-pre-wrap text-sm leading-loose text-slate-700 bg-slate-50 p-5 rounded-2xl border border-slate-100"></div>
-            </div>
-            <div class="mt-4 pt-2">
-               <button id="memoViewEditBtn" class="w-full flex items-center justify-center gap-2 py-3 bg-blue-50 text-blue-600 rounded-xl font-bold text-sm hover:bg-blue-100 transition-colors shadow-sm"><i data-lucide="pencil" size="16"></i> 編集する</button>
-            </div>
-        </div>
-    </div>
 
     <!-- ページ設定（編集）モーダル -->
     <div id="pageSettingsModal" class="fixed inset-0 z-[70] hidden flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
@@ -339,6 +323,7 @@
                     </div>
                 </div>
                 
+                <!-- ★ マップ表示オンオフで切り替えるエリア -->
                 <div id="addMapArea" class="pt-2">
                     <div class="flex justify-between items-center mb-1.5 ml-1">
                         <label class="block text-[10px] font-black text-green-600 uppercase tracking-widest flex items-center gap-1">
@@ -700,6 +685,7 @@
             }
         }
 
+        // ★ URLからタイトルとメモを自動生成する機能
         async function handleAiMetaGeneration() {
             const url = document.getElementById('addUrl').value.trim();
             const btn = document.getElementById('generateMetaBtn');
@@ -721,6 +707,7 @@
             const user = `以下のURLについて調べて、情報を抽出してください。\nURL: ${url}`;
             
             try {
+                // Search Grounding を有効にして呼び出し
                 const result = await safeCallGemini(user, sys, true);
                 let jsonStr = result?.trim().replace(/```json/gi, '').replace(/```/g, '').trim();
                 let data = JSON.parse(jsonStr);
@@ -982,6 +969,7 @@
             
             document.getElementById('driveSyncBtn').onclick = handleSyncClick;
             
+            // ★ AI自動入力ボタンのイベント追加
             document.getElementById('generateMetaBtn').onclick = handleAiMetaGeneration;
             document.getElementById('generateMapBtn').onclick = handleAiMapGeneration;
             document.getElementById('generateImageBtn').onclick = handleAiImageGeneration;
@@ -994,10 +982,6 @@
                 document.getElementById('settingsModal').classList.add('hidden');
                 updateApiBtnState(); showMsg("保存しました");
             };
-            
-            // ★ メモ詳細モーダルを閉じる処理
-            document.getElementById('closeMemoViewBtn').onclick = () => document.getElementById('memoViewModal').classList.add('hidden');
-
             setupInputClears(); setupImageLogic();
         }
 
@@ -1048,7 +1032,7 @@
                         accessToken = resp.access_token;
                         gapi.client.setToken({ access_token: accessToken });
                         await idbKeyval.set('gapi_access_token', accessToken);
-                        await idbKeyval.set('gapi_token_expiry', Date.now() + 3550 * 1000); 
+                        await idbKeyval.set('gapi_token_expiry', Date.now() + 3550 * 1000); // 約1時間
                         
                         if (actionAfterAuth === 'picker') showPicker();
                         else if (actionAfterAuth === 'sync') fetchDriveMemos(currentDriveFileId);
@@ -1263,21 +1247,6 @@
             });
         }
 
-        // ★ メモ詳細ポップアップを開く関数
-        window.openMemoModal = (id) => {
-            const memo = allMemos.find(m => m.id === id);
-            if (!memo) return;
-            document.getElementById('memoViewTitle').textContent = memo.title || 'メモ';
-            document.getElementById('memoViewContent').textContent = memo.text || 'テキストがありません。';
-            document.getElementById('memoViewModal').classList.remove('hidden');
-            
-            // 読んだあとすぐに編集できるようにボタンにIDを紐付け
-            document.getElementById('memoViewEditBtn').onclick = () => {
-                document.getElementById('memoViewModal').classList.add('hidden');
-                window.editMemo(id);
-            };
-        };
-
         function render() {
             const page = pages.find(p => p.id === currentPageId);
             const isMapEnabled = page && page.mapEnabled !== false;
@@ -1297,18 +1266,16 @@
             if (allMemos.length === 0) {
                 container.innerHTML = `<div class="col-span-full py-32 text-center text-slate-400">データがありません</div>`;
             } else {
-                // ★ line-clamp-4 と「メモ詳細」ボタンを追加
                 container.innerHTML = filtered.map(m => `
                     <div class="memo-item bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm flex flex-col hover:shadow-xl transition-all duration-300">
                         ${m.image ? `<img src="${getProxyImageUrl(m.image)}" class="w-full h-auto cursor-zoom-in block" onclick="window.openLightbox('${m.image}')" loading="lazy">` : ''}
                         <div class="p-5 flex-1 flex flex-col">
                             <h3 class="font-black text-slate-800 mb-3 text-base">${m.title}</h3>
-                            ${m.text ? `<div class="bg-blue-50/40 text-blue-900 text-[13px] p-4 rounded-2xl mb-4 whitespace-pre-wrap line-clamp-4">${m.text}</div>` : ''}
+                            ${m.text ? `<div class="bg-blue-50/40 text-blue-900 text-[13px] p-4 rounded-2xl mb-4 whitespace-pre-wrap">${m.text}</div>` : ''}
                             <div class="flex flex-wrap gap-1.5 mb-5">${(m.tags || []).map(t => `<span class="px-2.5 py-1 bg-slate-100 text-slate-500 text-[10px] rounded-lg font-black uppercase">#${t}</span>`).join('')}</div>
                             <div class="flex flex-wrap gap-2 mb-4">
                                 ${m.url ? `<button onclick="window.open('${m.url}', '_blank')" class="flex-1 bg-blue-50 text-blue-600 text-[11px] font-black py-2.5 rounded-xl border border-blue-100 flex items-center justify-center gap-1.5 transition-colors"><i data-lucide="globe" size="14"></i>公式サイト</button>` : ''}
                                 ${isMapEnabled && m.mapUrl ? `<button onclick="window.open('${m.mapUrl}', '_blank')" class="flex-1 bg-green-50 text-green-600 text-[11px] font-black py-2.5 rounded-xl border border-green-100 flex items-center justify-center gap-1.5 transition-colors"><i data-lucide="map-pin" size="14"></i>マップ表示</button>` : ''}
-                                ${m.text ? `<button onclick="window.openMemoModal('${m.id}')" class="flex-1 bg-amber-50 text-amber-600 text-[11px] font-black py-2.5 rounded-xl border border-amber-100 flex items-center justify-center gap-1.5 transition-colors"><i data-lucide="file-text" size="14"></i>メモ詳細</button>` : ''}
                             </div>
                             <div class="flex justify-between items-center pt-4 border-t border-slate-50 mt-auto">
                                 <span class="text-[9px] text-slate-300 font-black">${new Date(m.timestamp).toLocaleDateString()}</span>
@@ -1333,14 +1300,7 @@
             filtered.forEach(m => {
                 if (m.lat && m.lng) {
                     const marker = L.marker([m.lat, m.lng]).addTo(leafletMap);
-                    // ★ マップのポップアップにも「メモ詳細」ボタンを追加
-                    marker.bindPopup(`<div class="w-48 p-1">
-                        <h4 class="font-black text-slate-800 text-sm mb-3">${m.title}</h4>
-                        <div class="flex gap-1">
-                            ${m.text ? `<button onclick="window.openMemoModal('${m.id}')" class="flex-1 text-[10px] bg-amber-50 text-amber-600 py-1.5 rounded-lg font-bold">メモ</button>` : ''}
-                            <button onclick="window.editMemo('${m.id}')" class="flex-1 text-[10px] bg-blue-50 text-blue-600 py-1.5 rounded-lg font-bold">編集</button>
-                        </div>
-                    </div>`);
+                    marker.bindPopup(`<div class="w-48 p-1"><h4 class="font-black text-slate-800 text-sm mb-3">${m.title}</h4><button onclick="window.editMemo('${m.id}')" class="w-full text-[10px] bg-blue-50 text-blue-600 py-1.5 rounded-lg">編集</button></div>`);
                     mapMarkers.push(marker); bounds.push([m.lat, m.lng]);
                 }
             });
