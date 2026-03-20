@@ -76,7 +76,7 @@
                         <i data-lucide="send" size="26"></i>
                     </div>
                     <div>
-                        <h1 class="text-lg font-black text-slate-800 tracking-tight leading-none mb-1">Travel Scrapper <span class="text-xs font-bold text-slate-400 ml-1">v1.5</span></h1>
+                        <h1 class="text-lg font-black text-slate-800 tracking-tight leading-none mb-1">Travel Scrapper <span class="text-xs font-bold text-slate-400 ml-1">v1.7</span></h1>
                         
                         <div class="flex items-center mt-1">
                             <select id="pageSelect" class="bg-blue-50 text-blue-700 font-black text-[11px] px-2.5 py-1 rounded-lg border border-blue-100 outline-none cursor-pointer appearance-none pr-6 relative hover:bg-blue-100 transition-colors shadow-sm" style="background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2216%22%20height%3D%2216%22%20fill%3D%22none%22%20stroke%3D%22%232563eb%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%224%206%208%2010%2012%206%22%2F%3E%3C%2Fsvg%3E'); background-repeat: no-repeat; background-position: right 4px center;">
@@ -164,6 +164,22 @@
     <button id="fabAdd" class="fixed bottom-6 right-6 w-14 h-14 bg-blue-600 text-white rounded-full shadow-lg shadow-blue-300 flex items-center justify-center hover:bg-blue-700 active:scale-90 transition-transform z-50">
         <i data-lucide="plus" size="28"></i>
     </button>
+
+    <!-- ★ メモ詳細（ポップアップ）モーダル -->
+    <div id="memoViewModal" class="fixed inset-0 z-[80] hidden flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+        <div class="bg-white w-full max-w-md rounded-[2.5rem] p-6 shadow-2xl modal-enter max-h-[90vh] flex flex-col">
+            <div class="flex justify-between items-start mb-4 gap-4">
+                <h2 id="memoViewTitle" class="text-xl font-black text-slate-800 tracking-tight leading-snug"></h2>
+                <button id="closeMemoViewBtn" class="text-slate-400 hover:text-slate-600 transition-colors shrink-0 p-1 bg-slate-100 rounded-full"><i data-lucide="x" size="20"></i></button>
+            </div>
+            <div class="overflow-y-auto no-scrollbar">
+                <div id="memoViewContent" class="whitespace-pre-wrap text-sm leading-loose text-slate-700 bg-slate-50 p-5 rounded-2xl border border-slate-100"></div>
+            </div>
+            <div class="mt-4 pt-2">
+               <button id="memoViewEditBtn" class="w-full flex items-center justify-center gap-2 py-3 bg-blue-50 text-blue-600 rounded-xl font-bold text-sm hover:bg-blue-100 transition-colors shadow-sm"><i data-lucide="pencil" size="16"></i> 編集する</button>
+            </div>
+        </div>
+    </div>
 
     <!-- ページ設定（編集）モーダル -->
     <div id="pageSettingsModal" class="fixed inset-0 z-[70] hidden flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
@@ -323,7 +339,6 @@
                     </div>
                 </div>
                 
-                <!-- ★ マップ表示オンオフで切り替えるエリア -->
                 <div id="addMapArea" class="pt-2">
                     <div class="flex justify-between items-center mb-1.5 ml-1">
                         <label class="block text-[10px] font-black text-green-600 uppercase tracking-widest flex items-center gap-1">
@@ -463,6 +478,10 @@
         let tokenClient, accessToken = null, gapiInited = false, gisInited = false, actionAfterAuth = null;
 
         // --- Utils ---
+        function hasApiKey() {
+            return (userSetGeminiKey && userSetGeminiKey.trim() !== '') || (apiKey && apiKey.trim() !== '');
+        }
+
         function showMsg(message, isError = false) {
             const container = document.getElementById('toastContainer');
             const toast = document.createElement('div');
@@ -495,14 +514,26 @@
 
         function updateApiBtnState() {
             const btn = document.getElementById('openSettingsBtn');
+            const hasKey = hasApiKey();
             if (!btn) return;
-            if (userSetGeminiKey) {
+            if (hasKey) {
                 btn.classList.remove('text-slate-400', 'bg-slate-50');
                 btn.classList.add('text-blue-600', 'bg-blue-100');
             } else {
                 btn.classList.remove('text-blue-600', 'bg-blue-100');
                 btn.classList.add('text-slate-400', 'bg-slate-50');
             }
+
+            ['generateMetaBtn', 'generateMapBtn', 'generateImageBtn'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    if (hasKey) {
+                        el.classList.remove('opacity-50', 'cursor-not-allowed', 'saturate-50');
+                    } else {
+                        el.classList.add('opacity-50', 'cursor-not-allowed', 'saturate-50');
+                    }
+                }
+            });
         }
 
         function isAuthError(err) {
@@ -685,8 +716,12 @@
             }
         }
 
-        // ★ URLからタイトルとメモを自動生成する機能
         async function handleAiMetaGeneration() {
+            if (!hasApiKey()) {
+                showMsg("AI機能を利用するにはAPIキーを設定してください", true);
+                document.getElementById('settingsModal').classList.remove('hidden');
+                return;
+            }
             const url = document.getElementById('addUrl').value.trim();
             const btn = document.getElementById('generateMetaBtn');
             if (!url) {
@@ -707,7 +742,6 @@
             const user = `以下のURLについて調べて、情報を抽出してください。\nURL: ${url}`;
             
             try {
-                // Search Grounding を有効にして呼び出し
                 const result = await safeCallGemini(user, sys, true);
                 let jsonStr = result?.trim().replace(/```json/gi, '').replace(/```/g, '').trim();
                 let data = JSON.parse(jsonStr);
@@ -739,6 +773,11 @@
         }
 
         async function handleAiMapGeneration() {
+            if (!hasApiKey()) {
+                showMsg("AI機能を利用するにはAPIキーを設定してください", true);
+                document.getElementById('settingsModal').classList.remove('hidden');
+                return;
+            }
             const title = document.getElementById('addTitle').value.trim();
             const url = document.getElementById('addUrl').value.trim();
             const memoText = document.getElementById('addText').value.trim();
@@ -764,17 +803,17 @@
                 let data = JSON.parse(jsonStr);
                 if (data && data.keyword) {
                     mapInput.value = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(data.keyword)}`;
-                    document.getElementById('clear_addMapUrl')?.classList.remove('hidden');
-                    if (data.lat && data.lng) { latInput.value = data.lat; lngInput.value = data.lng; }
-                    showMsg("座標を特定しました！");
-                }
-            } catch (err) { showMsg("特定に失敗しました", true); } finally {
-                btn.classList.remove('btn-loading'); btn.innerHTML = originalInner;
+                btn.innerHTML = originalInner;
                 if (window.lucide) lucide.createIcons();
             }
         }
 
         async function handleAiImageGeneration() {
+            if (!hasApiKey()) {
+                showMsg("AI機能を利用するにはAPIキーを設定してください", true);
+                document.getElementById('settingsModal').classList.remove('hidden');
+                return;
+            }
             const title = document.getElementById('addTitle').value.trim();
             const url = document.getElementById('addUrl').value.trim();
             const memoText = document.getElementById('addText').value.trim();
@@ -969,7 +1008,6 @@
             
             document.getElementById('driveSyncBtn').onclick = handleSyncClick;
             
-            // ★ AI自動入力ボタンのイベント追加
             document.getElementById('generateMetaBtn').onclick = handleAiMetaGeneration;
             document.getElementById('generateMapBtn').onclick = handleAiMapGeneration;
             document.getElementById('generateImageBtn').onclick = handleAiImageGeneration;
@@ -982,6 +1020,10 @@
                 document.getElementById('settingsModal').classList.add('hidden');
                 updateApiBtnState(); showMsg("保存しました");
             };
+            
+            // ★ メモ詳細モーダルを閉じる処理
+            document.getElementById('closeMemoViewBtn').onclick = () => document.getElementById('memoViewModal').classList.add('hidden');
+
             setupInputClears(); setupImageLogic();
         }
 
@@ -1032,7 +1074,7 @@
                         accessToken = resp.access_token;
                         gapi.client.setToken({ access_token: accessToken });
                         await idbKeyval.set('gapi_access_token', accessToken);
-                        await idbKeyval.set('gapi_token_expiry', Date.now() + 3550 * 1000); // 約1時間
+                        await idbKeyval.set('gapi_token_expiry', Date.now() + 3550 * 1000); 
                         
                         if (actionAfterAuth === 'picker') showPicker();
                         else if (actionAfterAuth === 'sync') fetchDriveMemos(currentDriveFileId);
@@ -1210,26 +1252,56 @@
         }
 
         async function saveMemo() {
-            const title = document.getElementById('addTitle').value.trim();
-            if (!title) return;
-            const preview = document.getElementById('previewContainer');
-            const image = (!preview.classList.contains('hidden')) ? (uploadedImageDataUrl || document.getElementById('addImageUrl').value.trim()) : null;
-            const newMemo = {
-                id: editingMemoId || "m-" + Date.now(),
-                title, url: document.getElementById('addUrl').value.trim(),
-                mapUrl: document.getElementById('addMapUrl').value.trim(),
-                lat: document.getElementById('addLat').value ? parseFloat(document.getElementById('addLat').value) : null,
-                lng: document.getElementById('addLng').value ? parseFloat(document.getElementById('addLng').value) : null,
-                text: document.getElementById('addText').value.trim(),
-                image, tags: document.getElementById('addTags').value.split(',').map(t => t.trim()).filter(t => t),
-                timestamp: new Date().toISOString()
-            };
-            if (editingMemoId) {
-                const idx = allMemos.findIndex(m => m.id === editingMemoId); if (idx > -1) allMemos[idx] = newMemo;
-            } else { allMemos.unshift(newMemo); }
-            await idbKeyval.set(`travelMemos_${currentPageId}`, allMemos);
-            await pushToDrive(); render(); showMsg("保存しました");
-            document.getElementById('addModal').classList.add('hidden');
+            const titleInput = document.getElementById('addTitle');
+            const title = titleInput.value.trim();
+            if (!title) {
+                showMsg("タイトルを入力してください。", true);
+                titleInput.focus();
+                return;
+            }
+
+            const btn = document.getElementById('saveNewMemoBtn');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = `<i data-lucide="loader-2" class="animate-spin" size="20"></i> 保存中...`;
+            btn.disabled = true;
+            if (window.lucide) lucide.createIcons();
+
+            try {
+                const urlInputValue = document.getElementById('addImageUrl').value.trim();
+                const image = uploadedImageDataUrl || urlInputValue || null;
+
+                const newMemo = {
+                    id: editingMemoId || "m-" + Date.now(),
+                    title, 
+                    url: document.getElementById('addUrl').value.trim(),
+                    mapUrl: document.getElementById('addMapUrl').value.trim(),
+                    lat: document.getElementById('addLat').value ? parseFloat(document.getElementById('addLat').value) : null,
+                    lng: document.getElementById('addLng').value ? parseFloat(document.getElementById('addLng').value) : null,
+                    text: document.getElementById('addText').value.trim(),
+                    image, 
+                    tags: document.getElementById('addTags').value.split(',').map(t => t.trim()).filter(t => t),
+                    timestamp: new Date().toISOString()
+                };
+                if (editingMemoId) {
+                    const idx = allMemos.findIndex(m => m.id === editingMemoId); 
+                    if (idx > -1) allMemos[idx] = newMemo;
+                } else { 
+                    allMemos.unshift(newMemo); 
+                }
+                
+                await idbKeyval.set(`travelMemos_${currentPageId}`, allMemos);
+                await pushToDrive(); 
+                render(); 
+                showMsg("保存しました");
+                document.getElementById('addModal').classList.add('hidden');
+            } catch (err) {
+                showMsg("保存に失敗しました", true);
+                console.error(err);
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+                if (window.lucide) lucide.createIcons();
+            }
         }
 
         async function deleteMemo() {
@@ -1246,6 +1318,21 @@
                 return textMatch && tagMatch;
             });
         }
+
+        // ★ メモ詳細ポップアップを開く関数
+        window.openMemoModal = (id) => {
+            const memo = allMemos.find(m => m.id === id);
+            if (!memo) return;
+            document.getElementById('memoViewTitle').textContent = memo.title || 'メモ';
+            document.getElementById('memoViewContent').textContent = memo.text || 'テキストがありません。';
+            document.getElementById('memoViewModal').classList.remove('hidden');
+            
+            // 読んだあとすぐに編集できるようにボタンにIDを紐付け
+            document.getElementById('memoViewEditBtn').onclick = () => {
+                document.getElementById('memoViewModal').classList.add('hidden');
+                window.editMemo(id);
+            };
+        };
 
         function render() {
             const page = pages.find(p => p.id === currentPageId);
@@ -1266,16 +1353,18 @@
             if (allMemos.length === 0) {
                 container.innerHTML = `<div class="col-span-full py-32 text-center text-slate-400">データがありません</div>`;
             } else {
+                // ★ line-clamp-4 と「メモ詳細」ボタンを追加
                 container.innerHTML = filtered.map(m => `
                     <div class="memo-item bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm flex flex-col hover:shadow-xl transition-all duration-300">
                         ${m.image ? `<img src="${getProxyImageUrl(m.image)}" class="w-full h-auto cursor-zoom-in block" onclick="window.openLightbox('${m.image}')" loading="lazy">` : ''}
                         <div class="p-5 flex-1 flex flex-col">
                             <h3 class="font-black text-slate-800 mb-3 text-base">${m.title}</h3>
-                            ${m.text ? `<div class="bg-blue-50/40 text-blue-900 text-[13px] p-4 rounded-2xl mb-4 whitespace-pre-wrap">${m.text}</div>` : ''}
+                            ${m.text ? `<div class="bg-blue-50/40 text-blue-900 text-[13px] p-4 rounded-2xl mb-4 whitespace-pre-wrap line-clamp-4">${m.text}</div>` : ''}
                             <div class="flex flex-wrap gap-1.5 mb-5">${(m.tags || []).map(t => `<span class="px-2.5 py-1 bg-slate-100 text-slate-500 text-[10px] rounded-lg font-black uppercase">#${t}</span>`).join('')}</div>
                             <div class="flex flex-wrap gap-2 mb-4">
                                 ${m.url ? `<button onclick="window.open('${m.url}', '_blank')" class="flex-1 bg-blue-50 text-blue-600 text-[11px] font-black py-2.5 rounded-xl border border-blue-100 flex items-center justify-center gap-1.5 transition-colors"><i data-lucide="globe" size="14"></i>公式サイト</button>` : ''}
                                 ${isMapEnabled && m.mapUrl ? `<button onclick="window.open('${m.mapUrl}', '_blank')" class="flex-1 bg-green-50 text-green-600 text-[11px] font-black py-2.5 rounded-xl border border-green-100 flex items-center justify-center gap-1.5 transition-colors"><i data-lucide="map-pin" size="14"></i>マップ表示</button>` : ''}
+                                ${m.text ? `<button onclick="window.openMemoModal('${m.id}')" class="flex-1 bg-amber-50 text-amber-600 text-[11px] font-black py-2.5 rounded-xl border border-amber-100 flex items-center justify-center gap-1.5 transition-colors"><i data-lucide="file-text" size="14"></i>メモ詳細</button>` : ''}
                             </div>
                             <div class="flex justify-between items-center pt-4 border-t border-slate-50 mt-auto">
                                 <span class="text-[9px] text-slate-300 font-black">${new Date(m.timestamp).toLocaleDateString()}</span>
@@ -1300,7 +1389,14 @@
             filtered.forEach(m => {
                 if (m.lat && m.lng) {
                     const marker = L.marker([m.lat, m.lng]).addTo(leafletMap);
-                    marker.bindPopup(`<div class="w-48 p-1"><h4 class="font-black text-slate-800 text-sm mb-3">${m.title}</h4><button onclick="window.editMemo('${m.id}')" class="w-full text-[10px] bg-blue-50 text-blue-600 py-1.5 rounded-lg">編集</button></div>`);
+                    // ★ マップのポップアップにも「メモ詳細」ボタンを追加
+                    marker.bindPopup(`<div class="w-48 p-1">
+                        <h4 class="font-black text-slate-800 text-sm mb-3">${m.title}</h4>
+                        <div class="flex gap-1">
+                            ${m.text ? `<button onclick="window.openMemoModal('${m.id}')" class="flex-1 text-[10px] bg-amber-50 text-amber-600 py-1.5 rounded-lg font-bold">メモ</button>` : ''}
+                            <button onclick="window.editMemo('${m.id}')" class="flex-1 text-[10px] bg-blue-50 text-blue-600 py-1.5 rounded-lg font-bold">編集</button>
+                        </div>
+                    </div>`);
                     mapMarkers.push(marker); bounds.push([m.lat, m.lng]);
                 }
             });
@@ -1461,5 +1557,6 @@
     </script>
 </body>
 </html>
+
 
 
