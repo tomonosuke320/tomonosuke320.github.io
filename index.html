@@ -76,7 +76,7 @@
                         <i data-lucide="send" size="26"></i>
                     </div>
                     <div>
-                        <h1 class="text-lg font-black text-slate-800 tracking-tight leading-none mb-1">Travel Scrapper <span class="text-xs font-bold text-slate-400 ml-1">v1.9</span></h1>
+                        <h1 class="text-lg font-black text-slate-800 tracking-tight leading-none mb-1">Travel Scrapper <span class="text-xs font-bold text-slate-400 ml-1">v1.10</span></h1>
                         
                         <div class="flex items-center mt-1">
                             <select id="pageSelect" class="bg-blue-50 text-blue-700 font-black text-[11px] px-2.5 py-1 rounded-lg border border-blue-100 outline-none cursor-pointer appearance-none pr-6 relative hover:bg-blue-100 transition-colors shadow-sm" style="background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2216%22%20height%3D%2216%22%20fill%3D%22none%22%20stroke%3D%22%232563eb%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%224%206%208%2010%2012%206%22%2F%3E%3C%2Fsvg%3E'); background-repeat: no-repeat; background-position: right 4px center;">
@@ -491,6 +491,29 @@
             return (userSetGeminiKey && userSetGeminiKey.trim() !== '') || (apiKey && apiKey.trim() !== '');
         }
 
+        // ★ 新機能：CORSプロキシを使ってページのテキストを直接取得する
+        async function fetchUrlContent(url) {
+            try {
+                const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
+                const response = await fetch(proxyUrl, { cache: "no-store" });
+                const data = await response.json();
+                if (data.contents) {
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(data.contents, "text/html");
+                    // サイドバー、ヘッダー、フッターなどノイズになりやすい部分を削除
+                    doc.querySelectorAll('script, style, nav, footer, aside, iframe, noscript, header, [role="navigation"]').forEach(s => s.remove());
+                    let text = doc.body.textContent || "";
+                    // 余分な空白を圧縮
+                    text = text.replace(/\s+/g, ' ').trim();
+                    // AIの処理上限とノイズ低減のため、先頭の15,000文字に制限
+                    return text.substring(0, 15000);
+                }
+            } catch (e) {
+                console.warn("ページ内容の直接取得に失敗しました", e);
+            }
+            return null;
+        }
+
         function showMsg(message, isError = false) {
             const container = document.getElementById('toastContainer');
             const toast = document.createElement('div');
@@ -725,7 +748,6 @@
             }
         }
 
-        // ★ タイトルとメモのAI生成を独立し、プロンプトを強化
         async function handleAiTitleGeneration() {
             if (!hasApiKey()) {
                 showMsg("AI機能を利用するにはAPIキーを設定してください", true);
@@ -741,20 +763,33 @@
             }
             btn.classList.add('btn-loading');
             const originalInner = btn.innerHTML;
-            btn.innerHTML = `<i data-lucide="loader-2" class="animate-spin" size="12"></i> 抽出中...`;
+            btn.innerHTML = `<i data-lucide="loader-2" class="animate-spin" size="12"></i> ページ解析中...`;
             if (window.lucide) lucide.createIcons();
             
-            const sys = `あなたは情報抽出のプロフェッショナルです。提供されたURLの「メインコンテンツ」を分析し、最適なタイトルを生成してください。
-サイドバー、広告、おすすめ記事など、メインテーマと関係ない情報は絶対に無視してください。
+            // ページの内容を直接取得
+            const pageContent = await fetchUrlContent(url);
+
+            const sys = `あなたは情報抽出のプロフェッショナルです。提供されたページ内容から、「メインコンテンツ」を分析し、最適なタイトルを生成してください。
+サイドバーやおすすめ記事など、メインテーマと関係ない情報は絶対に無視してください。
 必ず以下のJSON形式でのみ出力してください。
 {"title": "サイトのメインテーマや特定の場所・料理の正確な名称"}`;
-            let user = `以下のURLのメインコンテンツについて調べて、タイトルを抽出してください。\nURL: ${url}`;
+            
+            let user = `対象URL: ${url}\n\n`;
             if (memoText) {
-                user += `\n\n【重要】\nすでに以下のメモが入力されています:\n${memoText}\n\nもしURL先が複数のコンテンツを紹介しているページ（まとめ記事など）の場合は、このメモの内容に最も合致する「特定の場所、店舗、料理の名前」をタイトルとして抽出してください。`;
+                user += `【重要】\nすでに以下のメモが入力されています:\n${memoText}\nこのメモの内容に最も合致する「特定の場所、店舗、料理の名前」をタイトルとして抽出してください。\n\n`;
+            }
+
+            if (pageContent) {
+                user += `【抽出元のページテキスト】\n${pageContent}\n`;
+            } else {
+                user += `【指示】\n直接取得できなかったため、上記URLについてGoogle検索し、タイトルを推測してください。\n`;
             }
             
+            // コンテンツが取れていれば検索ツール(true)は使わず、取れていなければ使う
+            const useSearch = !pageContent;
+
             try {
-                const result = await safeCallGemini(user, sys, true);
+                const result = await safeCallGemini(user, sys, useSearch);
                 let jsonStr = result?.trim().replace(/```json/gi, '').replace(/```/g, '').trim();
                 let data = JSON.parse(jsonStr);
                 
@@ -790,29 +825,39 @@
             }
             btn.classList.add('btn-loading');
             const originalInner = btn.innerHTML;
-            btn.innerHTML = `<i data-lucide="loader-2" class="animate-spin" size="12"></i> 要約中...`;
+            btn.innerHTML = `<i data-lucide="loader-2" class="animate-spin" size="12"></i> ページ解析中...`;
             if (window.lucide) lucide.createIcons();
+
+            // ページの内容を直接取得
+            const pageContent = await fetchUrlContent(url);
             
-            const sys = `あなたは情報整理のプロフェッショナルです。提供されたURLの「メインコンテンツ」のみを分析し、要約テキストを生成してください。
-サイドバー、おすすめ記事、他のページへのリンク、広告などの無関係な情報は絶対に無視してください。
+            const sys = `あなたは情報整理のプロフェッショナルです。提供されたページの「メインコンテンツ」のみを分析し、要約テキストを生成してください。
+【厳守事項】サイドバー、おすすめ記事、他のページへのリンク（別のレシピなど）、広告のテキストは絶対に無視してください。
 
 【ジャンル別の要約フォーマット】
-- 料理レシピ: そのURLで紹介されているメインの料理の【材料】と【作り方の手順】を正確に箇条書きでまとめる（別のレシピは絶対に混ぜないこと）。
+- 料理レシピ: メインとなる1つの料理の【材料】と【作り方の手順】のみを正確に箇条書きでまとめる（別のレシピは絶対に混ぜない）。
 - 施設/観光地: 【営業時間】【料金】【アクセス】などをまとめる。
 - 飲食店: 【営業時間】【予約可否】【おすすめメニュー】などをまとめる。
 - まとめ記事: 全体の概要、または指定されたタイトルに関連する部分のみをピックアップする。
 
 必ず以下のJSON形式でのみ出力してください。
 {"memo": "要約テキスト"}`;
-            let user = `以下のURLのメインコンテンツを調べて、情報を抽出・要約してください。\nURL: ${url}`;
+            
+            let user = `対象URL: ${url}\n\n`;
             if (title) {
-                user += `\n\n【重要】\nすでに以下のタイトルが入力されています: 「${title}」\nページ内に複数のコンテンツ（まとめ記事など）がある場合は、このタイトルに関連する部分の内容だけを抽出してください。\n関係のない別の店舗や別のレシピの情報は絶対に含めないでください。`;
-            } else {
-                user += `\n\n【重要】\n指定されたURLのメインとなる主題（一番大きく扱われている料理や店舗など）についてのみ要約してください。別の記事へのリンク内容は無視してください。`;
+                user += `【重要ターゲット】\n「${title}」というタイトルのレシピや場所に関する部分の内容だけを抽出してください。それ以外の料理や施設の情報は除外してください。\n\n`;
             }
+
+            if (pageContent) {
+                user += `【要約元のページテキスト】\n${pageContent}\n`;
+            } else {
+                user += `【指示】\n直接取得できなかったため、上記URLについてGoogle検索し、メインコンテンツを要約してください。\n`;
+            }
+
+            const useSearch = !pageContent;
             
             try {
-                const result = await safeCallGemini(user, sys, true);
+                const result = await safeCallGemini(user, sys, useSearch);
                 let jsonStr = result?.trim().replace(/```json/gi, '').replace(/```/g, '').trim();
                 let data = JSON.parse(jsonStr);
                 
