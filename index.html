@@ -76,7 +76,7 @@
                         <i data-lucide="send" size="26"></i>
                     </div>
                     <div>
-                        <h1 class="text-lg font-black text-slate-800 tracking-tight leading-none mb-1">Travel Scrapper <span class="text-xs font-bold text-slate-400 ml-1">v1.3</span></h1>
+                        <h1 class="text-lg font-black text-slate-800 tracking-tight leading-none mb-1">Travel Scrapper <span class="text-xs font-bold text-slate-400 ml-1">v1.4</span></h1>
                         
                         <div class="flex items-center mt-1">
                             <select id="pageSelect" class="bg-blue-50 text-blue-700 font-black text-[11px] px-2.5 py-1 rounded-lg border border-blue-100 outline-none cursor-pointer appearance-none pr-6 relative hover:bg-blue-100 transition-colors shadow-sm" style="background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2216%22%20height%3D%2216%22%20fill%3D%22none%22%20stroke%3D%22%232563eb%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%224%206%208%2010%2012%206%22%2F%3E%3C%2Fsvg%3E'); background-repeat: no-repeat; background-position: right 4px center;">
@@ -123,7 +123,7 @@
     <div class="max-w-6xl mx-auto px-4 mt-6">
         <div class="bg-white p-4 md:p-6 rounded-3xl border border-slate-200 shadow-sm flex flex-col gap-4">
             
-            <div class="flex gap-2 p-1 bg-slate-100 rounded-2xl w-full sm:w-auto self-start">
+            <div id="viewModeTabs" class="flex gap-2 p-1 bg-slate-100 rounded-2xl w-full sm:w-auto self-start">
                 <button id="tabListBtn" class="flex-1 sm:flex-none px-6 py-2.5 rounded-xl text-sm font-bold transition-all bg-white text-slate-800 shadow-sm flex items-center justify-center gap-2">
                     <i data-lucide="layout-grid" size="16"></i>リスト
                 </button>
@@ -184,6 +184,18 @@
                     </div>
                 </div>
 
+                <!-- ★ マップ機能のトグル追加 -->
+                <div class="pt-2 border-t border-slate-100 mt-2">
+                    <div class="flex items-center justify-between py-2">
+                        <label class="text-[10px] font-black text-slate-500 uppercase tracking-widest cursor-pointer" for="settingMapToggle">マップ機能（場所のピン留め）</label>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="settingMapToggle" class="sr-only peer">
+                            <div class="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+                        </label>
+                    </div>
+                    <p class="text-[9px] text-slate-400">オフにするとシンプルなブックマークアプリとして使えます。</p>
+                </div>
+
                 <div class="pt-2 border-t border-slate-100">
                     <label class="block text-[10px] font-black text-slate-500 mb-1.5 uppercase tracking-widest">Googleドライブ連携</label>
                     <p id="settingDriveStatus" class="text-[11px] text-slate-500 mb-2 font-bold px-1"></p>
@@ -219,7 +231,7 @@
         </div>
     </div>
 
-    <!-- ★ 新規ページ追加モーダル（リニューアル） -->
+    <!-- 新規ページ追加モーダル -->
     <div id="newPageModal" class="fixed inset-0 z-[70] hidden flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
         <div class="bg-white w-full max-w-sm rounded-[2rem] p-6 shadow-2xl modal-enter">
             <div class="flex justify-between items-center mb-6">
@@ -307,7 +319,8 @@
                     </div>
                 </div>
                 
-                <div class="pt-2">
+                <!-- ★ マップ表示オンオフで切り替えるエリア -->
+                <div id="addMapArea" class="pt-2">
                     <div class="flex justify-between items-center mb-1.5 ml-1">
                         <label class="block text-[10px] font-black text-green-600 uppercase tracking-widest flex items-center gap-1">
                             <i data-lucide="map-pin" size="12"></i> Googleマップ表示用
@@ -432,8 +445,7 @@
         let leafletMap = null;
         let mapMarkers = [];
         
-        // ★ Pickerの動作モード ('linkCurrent':現在のページと紐付け, 'newPage':新ページとして追加)
-        let pickerMode = 'linkCurrent'; 
+        let pickerMode = 'linkCurrentFolder'; 
 
         const apiKey = ""; 
         let userSetGeminiKey = ""; 
@@ -489,18 +501,39 @@
             }
         }
 
+        function isAuthError(err) {
+            if (!err) return false;
+            const status = err.status || err.code;
+            return status === 401 || status === 403;
+        }
+
+        async function clearAuthToken() {
+            accessToken = null;
+            await idbKeyval.del('gapi_access_token');
+            await idbKeyval.del('gapi_token_expiry');
+            updateDriveUI();
+        }
+
+        async function logout() {
+            await clearAuthToken();
+            showMsg("ログアウトしました");
+        }
+
         function updateDriveUI() {
             const syncBtn = document.getElementById('driveSyncBtn');
             const syncText = document.getElementById('driveSyncText');
             const iconWrapper = document.getElementById('syncIconWrapper');
             const logoutBtn = document.getElementById('logoutBtn');
+            
             if (logoutBtn) logoutBtn.classList.toggle('hidden', !accessToken);
+            
             const settingDriveStatus = document.getElementById('settingDriveStatus');
             if (settingDriveStatus) {
                 settingDriveStatus.textContent = currentDriveFileId ? "ステータス: 連携中" : "ステータス: 未連携 (ローカルのみ)";
             }
             if (!syncBtn || !syncText || !iconWrapper) return;
             syncBtn.className = "flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm shadow-lg active:scale-95 transition-all";
+            
             if (!accessToken) {
                 syncBtn.classList.add('bg-slate-600', 'text-white', 'shadow-slate-200', 'hover:bg-slate-700');
                 syncText.textContent = "Drive連携";
@@ -537,6 +570,23 @@
             render();
         }
 
+        // ★ マップ機能のUI表示を切り替える関数
+        function updateMapFeatureVisibility() {
+            const page = pages.find(p => p.id === currentPageId);
+            const isMapEnabled = page && page.mapEnabled !== false; // デフォルトtrue
+
+            // タブ全体
+            const viewModeTabs = document.getElementById('viewModeTabs');
+            if (viewModeTabs) viewModeTabs.classList.toggle('hidden', !isMapEnabled);
+            
+            // マップモードのままオフにされたらリストに戻す
+            if (!isMapEnabled && viewMode === 'map') setViewMode('list');
+
+            // 追加モーダル内のマップエリア
+            const mapInputArea = document.getElementById('addMapArea');
+            if (mapInputArea) mapInputArea.classList.toggle('hidden', !isMapEnabled);
+        }
+
         function renderPageSelect() {
             const select = document.getElementById('pageSelect');
             if (!select) return;
@@ -560,9 +610,9 @@
             }
         }
 
-        async function createNewPage(name, driveId = null, initialMemos = []) {
+        async function createNewPage(name, driveId = null, initialMemos = [], mapEnabled = true) {
             const newId = 'p-' + Date.now();
-            pages.push({ id: newId, name: name, driveFileId: driveId });
+            pages.push({ id: newId, name: name, driveFileId: driveId, mapEnabled: mapEnabled });
             await idbKeyval.set('travel_pages', pages);
             await idbKeyval.set(`travelMemos_${newId}`, initialMemos);
             await switchPage(newId);
@@ -585,17 +635,22 @@
         // --- JSON Helper ---
         function parseTravelJson(jsonObj, defaultName = "") {
             if (Array.isArray(jsonObj)) {
-                return { name: defaultName, memos: jsonObj };
+                return { name: defaultName, mapEnabled: true, memos: jsonObj };
             } else if (jsonObj && jsonObj.memos && Array.isArray(jsonObj.memos)) {
-                return { name: jsonObj.pageName || defaultName, memos: jsonObj.memos };
+                return { 
+                    name: jsonObj.pageName || defaultName, 
+                    mapEnabled: jsonObj.mapEnabled !== undefined ? jsonObj.mapEnabled : true,
+                    memos: jsonObj.memos 
+                };
             }
-            return { name: defaultName, memos: [] };
+            return { name: defaultName, mapEnabled: true, memos: [] };
         }
 
         function prepareJsonForExport() {
             const page = pages.find(p => p.id === currentPageId);
             return {
                 pageName: page ? page.name : "My Travel",
+                mapEnabled: page && page.mapEnabled !== undefined ? page.mapEnabled : true,
                 exportDate: new Date().toISOString(),
                 memos: allMemos
             };
@@ -743,20 +798,33 @@
         }
 
         function initLocalEvents() {
-            // ページ選択プルダウン
             document.getElementById('pageSelect').addEventListener('change', async (e) => {
                 await switchPage(e.target.value);
             });
-            
-            // ページ設定モーダル
             document.getElementById('openPageSettingsBtn').onclick = () => {
                 const page = pages.find(p => p.id === currentPageId);
                 document.getElementById('settingPageName').value = page.name;
+                // マップトグルの状態をセット
+                document.getElementById('settingMapToggle').checked = page.mapEnabled !== false;
                 updateDriveUI(); 
                 document.getElementById('pageSettingsModal').classList.remove('hidden');
             };
             document.getElementById('closePageSettingsBtn').onclick = () => document.getElementById('pageSettingsModal').classList.add('hidden');
             
+            // ★ マップ機能のオンオフ設定
+            document.getElementById('settingMapToggle').onchange = async (e) => {
+                const page = pages.find(p => p.id === currentPageId);
+                page.mapEnabled = e.target.checked;
+                await idbKeyval.set('travel_pages', pages);
+                
+                updateMapFeatureVisibility();
+                render(); // 一覧のマップ表示ボタンの状態を更新
+                
+                if (currentDriveFileId && accessToken) {
+                    await pushToDrive();
+                }
+            };
+
             document.getElementById('savePageNameBtn').onclick = async () => {
                 const newName = document.getElementById('settingPageName').value.trim();
                 if (!newName) return;
@@ -764,7 +832,7 @@
                 
                 if (page.name === newName) {
                     document.getElementById('pageSettingsModal').classList.add('hidden');
-                    return; // 変更なしなら閉じて終了
+                    return; 
                 }
 
                 page.name = newName;
@@ -777,17 +845,23 @@
                     btn.textContent = "同期中...";
                     btn.disabled = true;
                     
-                    await pushToDrive(); // JSON内の pageName を更新して送信
-                    
-                    try {
-                        // Driveのファイル名(メタデータ)も同時に更新
-                        const finalFileName = newName.endsWith('.json') ? newName : `${newName}.json`;
-                        await gapi.client.request({
-                            path: '/drive/v3/files/' + currentDriveFileId,
-                            method: 'PATCH',
-                            body: JSON.stringify({ name: finalFileName })
-                        });
-                    } catch (e) { console.error("ファイル名同期エラー", e); }
+                    const pushSuccess = await pushToDrive(); 
+                    if (pushSuccess) {
+                        try {
+                            await gapi.client.request({
+                                path: '/drive/v3/files/' + currentDriveFileId,
+                                method: 'PATCH',
+                                body: JSON.stringify({ name: newName.endsWith('.json') ? newName : `${newName}.json` })
+                            });
+                        } catch (e) {
+                            if (isAuthError(e)) {
+                                await clearAuthToken();
+                                showMsg("認証エラーによりファイル名同期が失敗しました", true);
+                            } else {
+                                console.error("ファイル名同期エラー", e);
+                            }
+                        }
+                    }
                     
                     btn.textContent = oldText;
                     btn.disabled = false;
@@ -796,6 +870,7 @@
                 showMsg("ページ名を変更しました");
                 document.getElementById('pageSettingsModal').classList.add('hidden');
             };
+
             document.getElementById('settingExportBtn').onclick = exportJsonData;
             document.getElementById('settingFileInput').onchange = handleSettingFileUpload;
             document.getElementById('settingDeletePageBtn').onclick = () => {
@@ -806,25 +881,11 @@
                 });
             };
             
-            // ★ モード切替付きのPicker連携
-            document.getElementById('settingDrivePickerFolderBtn').onclick = () => {
-                pickerMode = 'linkCurrentFolder';
-                handlePickerClick();
-            };
-            document.getElementById('settingDrivePickerFlatBtn').onclick = () => {
-                pickerMode = 'linkCurrentFlat';
-                handlePickerClick();
-            };
-            document.getElementById('createNewFromDriveFolderBtn').onclick = () => {
-                pickerMode = 'newPageFolder';
-                handlePickerClick();
-            };
-            document.getElementById('createNewFromDriveFlatBtn').onclick = () => {
-                pickerMode = 'newPageFlat';
-                handlePickerClick();
-            };
+            document.getElementById('settingDrivePickerFolderBtn').onclick = () => { pickerMode = 'linkCurrentFolder'; handlePickerClick(); };
+            document.getElementById('settingDrivePickerFlatBtn').onclick = () => { pickerMode = 'linkCurrentFlat'; handlePickerClick(); };
+            document.getElementById('createNewFromDriveFolderBtn').onclick = () => { pickerMode = 'newPageFolder'; handlePickerClick(); };
+            document.getElementById('createNewFromDriveFlatBtn').onclick = () => { pickerMode = 'newPageFlat'; handlePickerClick(); };
 
-            // 新規ページ追加モーダル
             document.getElementById('openNewPageBtn').onclick = () => {
                 document.getElementById('newPageName').value = '';
                 document.getElementById('newPageModal').classList.remove('hidden');
@@ -839,10 +900,8 @@
             };
             document.getElementById('createNewDriveBtn').onclick = createNewDrivePage;
             
-            // ★ ローカルから新しいページを開く
             document.getElementById('newPageFileInput').onchange = handleNewPageFileUpload;
 
-            // その他
             document.getElementById('fabAdd').onclick = openAddModal;
             document.getElementById('searchInput').oninput = (e) => { searchQuery = e.target.value; render(); };
             document.getElementById('tabListBtn').onclick = () => setViewMode('list');
@@ -850,7 +909,10 @@
             document.getElementById('closeAddModalBtn').onclick = () => document.getElementById('addModal').classList.add('hidden');
             document.getElementById('saveNewMemoBtn').onclick = saveMemo;
             document.getElementById('deleteMemoBtn').onclick = () => showConfirm("メモを削除しますか？", deleteMemo);
+            
+            document.getElementById('logoutBtn').onclick = () => showConfirm("ログアウトしますか？", logout);
             document.getElementById('clearDataBtn').onclick = () => showConfirm("全キャッシュをリセットしますか？", async () => { await idbKeyval.clear(); location.reload(); });
+            
             document.getElementById('driveSyncBtn').onclick = handleSyncClick;
             document.getElementById('generateMapBtn').onclick = handleAiMapGeneration;
             document.getElementById('generateImageBtn').onclick = handleAiImageGeneration;
@@ -871,7 +933,7 @@
             if (!pages || pages.length === 0) {
                 const oldMemos = await idbKeyval.get('travelMemos_cache');
                 const oldDriveId = await idbKeyval.get('driveFileId_cache');
-                pages = [{ id: 'default', name: 'マイノート', driveFileId: oldDriveId || null }];
+                pages = [{ id: 'default', name: 'マイノート', driveFileId: oldDriveId || null, mapEnabled: true }];
                 currentPageId = 'default';
                 await idbKeyval.set('travel_pages', pages);
                 await idbKeyval.set('travel_current_page', currentPageId);
@@ -879,16 +941,23 @@
             }
             if (!pages.find(p => p.id === currentPageId)) currentPageId = pages[0].id;
             await loadCurrentPageData();
+            
             userSetGeminiKey = (await idbKeyval.get('user_gemini_key')) || "";
             document.getElementById('geminiApiKeyInput').value = userSetGeminiKey;
             updateApiBtnState();
+            
             accessToken = await idbKeyval.get('gapi_access_token');
+            const expiry = await idbKeyval.get('gapi_token_expiry');
+            if (expiry && Date.now() > parseInt(expiry)) {
+                await clearAuthToken(); 
+            }
         }
 
         async function loadCurrentPageData() {
             const page = pages.find(p => p.id === currentPageId);
             currentDriveFileId = page.driveFileId;
             allMemos = (await idbKeyval.get(`travelMemos_${currentPageId}`)) || [];
+            updateMapFeatureVisibility();
             renderPageSelect();
             updateDriveUI();
         }
@@ -905,6 +974,8 @@
                         accessToken = resp.access_token;
                         gapi.client.setToken({ access_token: accessToken });
                         await idbKeyval.set('gapi_access_token', accessToken);
+                        await idbKeyval.set('gapi_token_expiry', Date.now() + 3550 * 1000); // 約1時間
+                        
                         if (actionAfterAuth === 'picker') showPicker();
                         else if (actionAfterAuth === 'sync') fetchDriveMemos(currentDriveFileId);
                         else if (actionAfterAuth === 'createNewDrivePage') {
@@ -915,6 +986,7 @@
                         updateDriveUI();
                     },
                 });
+                
                 if (accessToken) {
                     gapi.client.setToken({ access_token: accessToken });
                     updateDriveUI();
@@ -926,7 +998,6 @@
         function handleSyncClick() {
             if (!accessToken) { 
                 actionAfterAuth = 'sync'; 
-                // もし現在のページが連携されていなければ、モードを設定してピッカーへ
                 if (!currentDriveFileId) pickerMode = 'linkCurrentFolder';
                 tokenClient.requestAccessToken({prompt: 'consent'}); 
             }
@@ -953,12 +1024,12 @@
                 title = "保存先フォルダを選択してください";
             } else if (pickerMode === 'linkCurrentFlat' || pickerMode === 'newPageFlat') {
                 view = new google.picker.DocsView(google.picker.ViewId.DOCS)
-                    .setIncludeFolders(false) // ★ フォルダを表示せずフラットに
+                    .setIncludeFolders(false)
                     .setMimeTypes('application/json');
                 title = "旅行メモを選択（全ファイル一覧）";
             } else {
                 view = new google.picker.DocsView(google.picker.ViewId.DOCS)
-                    .setIncludeFolders(true) // ★ フォルダを表示して中に入れるようにする
+                    .setIncludeFolders(true)
                     .setMimeTypes('application/json');
                 title = "旅行メモを選択（フォルダから探す）";
             }
@@ -973,20 +1044,17 @@
                         const file = data.docs[0];
                         
                         if (pickerMode === 'selectFolderForNewPage') {
-                            // ★ フォルダが選択されたらその中に新規作成
                             const folderId = file.id;
                             const pageName = sessionStorage.getItem('pendingPageName') || '新しい旅行';
                             sessionStorage.removeItem('pendingPageName');
                             await executeCreateNewDrivePage(pageName, folderId);
                         } else if (pickerMode.startsWith('newPage')) {
-                            // ★ ドライブのファイルを「新しいページ」として追加
                             const fileName = file.name.replace('.json', '');
                             document.getElementById('newPageModal').classList.add('hidden');
                             await createNewPage(fileName, file.id, []); 
                             updateDriveUI();
                             fetchDriveMemos(file.id);
                         } else {
-                            // ★ 既存のページに紐付け
                             const page = pages.find(p => p.id === currentPageId);
                             page.driveFileId = file.id;
                             currentDriveFileId = file.id;
@@ -1013,23 +1081,41 @@
                 const result = parseTravelJson(resp.result);
                 allMemos = result.memos;
                 
-                // メタデータからページ名を最新に更新 (他の端末で変更された場合用)
-                if (result.name) {
+                // メタデータの同期反映
+                if (result.name || result.mapEnabled !== undefined) {
                     const page = pages.find(p => p.id === currentPageId);
-                    if(page && page.name !== result.name) {
+                    let updated = false;
+                    
+                    if(page && page.name !== result.name && result.name) {
                         page.name = result.name;
+                        updated = true;
+                    }
+                    const incomingMapEnabled = result.mapEnabled !== undefined ? result.mapEnabled : true;
+                    if(page && page.mapEnabled !== incomingMapEnabled) {
+                        page.mapEnabled = incomingMapEnabled;
+                        updated = true;
+                    }
+
+                    if (updated) {
                         await idbKeyval.set('travel_pages', pages);
                         renderPageSelect();
-                        // 設定モーダルが開いている場合はそこも更新
                         const settingNameInput = document.getElementById('settingPageName');
-                        if (settingNameInput) settingNameInput.value = result.name;
+                        if (settingNameInput) settingNameInput.value = page.name;
+                        const settingMapToggle = document.getElementById('settingMapToggle');
+                        if (settingMapToggle) settingMapToggle.checked = page.mapEnabled;
+                        updateMapFeatureVisibility();
                     }
                 }
 
                 await idbKeyval.set(`travelMemos_${currentPageId}`, allMemos);
                 render(); showMsg("同期しました");
             } catch (e) {
-                showMsg("同期に失敗しました", true);
+                if (isAuthError(e)) {
+                    await clearAuthToken();
+                    showMsg("セッションが切れました。再ログインしてください。", true);
+                } else {
+                    showMsg("同期に失敗しました", true);
+                }
             } finally { updateDriveUI(); }
         }
 
@@ -1042,7 +1128,15 @@
                     method: 'PATCH', params: { uploadType: 'media' }, body: JSON.stringify(dataToSave, null, 2)
                 });
                 return true;
-            } catch (err) { return false; }
+            } catch (err) { 
+                if (isAuthError(err)) {
+                    await clearAuthToken();
+                    showMsg("セッションが切れました。再ログインしてください。", true);
+                } else {
+                    showMsg("保存エラーが発生しました", true);
+                }
+                return false; 
+            }
         }
 
         function openAddModal() {
@@ -1097,6 +1191,9 @@
         }
 
         function render() {
+            const page = pages.find(p => p.id === currentPageId);
+            const isMapEnabled = page && page.mapEnabled !== false;
+
             const tags = new Set(); allMemos.forEach(m => (m.tags || []).forEach(t => tags.add(t)));
             const tagContainer = document.getElementById('tagList');
             document.querySelectorAll('.dynamic-tag').forEach(c => c.remove());
@@ -1121,7 +1218,7 @@
                             <div class="flex flex-wrap gap-1.5 mb-5">${(m.tags || []).map(t => `<span class="px-2.5 py-1 bg-slate-100 text-slate-500 text-[10px] rounded-lg font-black uppercase">#${t}</span>`).join('')}</div>
                             <div class="flex flex-wrap gap-2 mb-4">
                                 ${m.url ? `<button onclick="window.open('${m.url}', '_blank')" class="flex-1 bg-blue-50 text-blue-600 text-[11px] font-black py-2.5 rounded-xl border border-blue-100 flex items-center justify-center gap-1.5 transition-colors"><i data-lucide="globe" size="14"></i>公式サイト</button>` : ''}
-                                ${m.mapUrl ? `<button onclick="window.open('${m.mapUrl}', '_blank')" class="flex-1 bg-green-50 text-green-600 text-[11px] font-black py-2.5 rounded-xl border border-green-100 flex items-center justify-center gap-1.5 transition-colors"><i data-lucide="map-pin" size="14"></i>マップ表示</button>` : ''}
+                                ${isMapEnabled && m.mapUrl ? `<button onclick="window.open('${m.mapUrl}', '_blank')" class="flex-1 bg-green-50 text-green-600 text-[11px] font-black py-2.5 rounded-xl border border-green-100 flex items-center justify-center gap-1.5 transition-colors"><i data-lucide="map-pin" size="14"></i>マップ表示</button>` : ''}
                             </div>
                             <div class="flex justify-between items-center pt-4 border-t border-slate-50 mt-auto">
                                 <span class="text-[9px] text-slate-300 font-black">${new Date(m.timestamp).toLocaleDateString()}</span>
@@ -1191,26 +1288,17 @@
         async function createNewDrivePage() {
             const pageName = document.getElementById('newPageName').value.trim() || '新しい旅行';
             sessionStorage.setItem('pendingPageName', pageName);
-
-            if (!accessToken) { 
-                actionAfterAuth = 'createNewDrivePage'; 
-                tokenClient.requestAccessToken({prompt: 'consent'}); 
-                return; 
-            }
-            
-            // フォルダ選択ピッカーを開く
+            if (!accessToken) { actionAfterAuth = 'createNewDrivePage'; tokenClient.requestAccessToken({prompt: 'consent'}); return; }
             pickerMode = 'selectFolderForNewPage';
             showPicker();
         }
 
         async function executeCreateNewDrivePage(pageName, folderId) {
             try {
-                const metadata = { 
-                    name: pageName + ".json", 
-                    mimeType: 'application/json',
-                    parents: [folderId] // ★ 選択したフォルダIDを指定
-                };
-                const content = JSON.stringify({ pageName: pageName, memos: [] }, null, 2);
+                const metadata = { name: pageName + ".json", mimeType: 'application/json' };
+                if (folderId) metadata.parents = [folderId];
+                
+                const content = JSON.stringify({ pageName: pageName, mapEnabled: true, memos: [] }, null, 2);
                 const boundary = '-------314159265358979323846';
                 const delimiter = "\r\n--" + boundary + "\r\n";
                 const multipartRequestBody = delimiter + 'Content-Type: application/json\r\n\r\n' + JSON.stringify(metadata) + delimiter + 'Content-Type: application/json\r\n\r\n' + content + "\r\n--" + boundary + "--";
@@ -1223,12 +1311,16 @@
                 });
                 
                 const resp = await new Promise((resolve, reject) => request.execute(r => r.error ? reject(r.error) : resolve(r)));
-                await createNewPage(pageName, resp.id, []);
+                await createNewPage(pageName, resp.id, [], true);
                 document.getElementById('newPageModal').classList.add('hidden');
-                showMsg("指定したフォルダにページを作成しました");
-            } catch (err) { 
-                showMsg("作成に失敗しました", true); 
-                console.error(err);
+                showMsg("Driveにページを作成しました");
+            } catch (err) {
+                if (isAuthError(err)) {
+                    await clearAuthToken();
+                    showMsg("セッションが切れました。再ログインしてください。", true);
+                } else {
+                    showMsg("作成に失敗しました", true); 
+                }
             }
         }
 
@@ -1242,9 +1334,17 @@
                         allMemos = result.memos;
                         const page = pages.find(p => p.id === currentPageId);
                         page.name = result.name;
+                        page.mapEnabled = result.mapEnabled !== undefined ? result.mapEnabled : true;
+                        
                         await idbKeyval.set(`travelMemos_${currentPageId}`, allMemos);
                         await idbKeyval.set('travel_pages', pages);
-                        await pushToDrive(); render(); renderPageSelect();
+                        await pushToDrive(); 
+                        
+                        document.getElementById('settingPageName').value = page.name;
+                        document.getElementById('settingMapToggle').checked = page.mapEnabled;
+                        updateMapFeatureVisibility();
+                        
+                        render(); renderPageSelect();
                         document.getElementById('pageSettingsModal').classList.add('hidden');
                     }
                 } catch (err) { showMsg("読み込み失敗", true); }
@@ -1253,14 +1353,14 @@
             e.target.value = '';
         }
 
-        // ★ ローカルファイルから新しいページを作成
         async function handleNewPageFileUpload(e) {
             const file = e.target.files[0]; if (!file) return;
             const reader = new FileReader();
             reader.onload = async (ev) => {
                 try {
                     const result = parseTravelJson(JSON.parse(ev.target.result), file.name.replace('.json',''));
-                    await createNewPage(result.name, null, result.memos);
+                    const incomingMapEnabled = result.mapEnabled !== undefined ? result.mapEnabled : true;
+                    await createNewPage(result.name, null, result.memos, incomingMapEnabled);
                     document.getElementById('newPageModal').classList.add('hidden');
                     showMsg("ファイルを新しいページとして読み込みました");
                 } catch (err) { showMsg("読み込み失敗", true); }
@@ -1304,3 +1404,5 @@
     </script>
 </body>
 </html>
+
+
