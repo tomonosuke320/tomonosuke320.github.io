@@ -76,7 +76,7 @@
                         <i data-lucide="send" size="26"></i>
                     </div>
                     <div>
-                        <h1 class="text-lg font-black text-slate-800 tracking-tight leading-none mb-1">Travel Scrapper <span class="text-xs font-bold text-slate-400 ml-1">v1.7.1</span></h1>
+                        <h1 class="text-lg font-black text-slate-800 tracking-tight leading-none mb-1">Travel Scrapper <span class="text-xs font-bold text-slate-400 ml-1">v1.8</span></h1>
                         
                         <div class="flex items-center mt-1">
                             <select id="pageSelect" class="bg-blue-50 text-blue-700 font-black text-[11px] px-2.5 py-1 rounded-lg border border-blue-100 outline-none cursor-pointer appearance-none pr-6 relative hover:bg-blue-100 transition-colors shadow-sm" style="background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2216%22%20height%3D%2216%22%20fill%3D%22none%22%20stroke%3D%22%232563eb%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%224%206%208%2010%2012%206%22%2F%3E%3C%2Fsvg%3E'); background-repeat: no-repeat; background-position: right 4px center;">
@@ -313,22 +313,22 @@
             <div class="space-y-4">
                 
                 <div class="bg-blue-50/50 p-3 rounded-2xl border border-blue-100">
-                    <div class="flex justify-between items-center mb-1.5 ml-1">
-                        <label class="block text-[10px] font-black text-blue-700 uppercase tracking-widest flex items-center gap-1">
-                            <i data-lucide="link" size="12"></i> 公式サイト・食べログ等のURL
-                        </label>
-                        <button type="button" id="generateMetaBtn" class="text-[10px] font-bold bg-blue-600 text-white px-3 py-1.5 rounded-lg hover:bg-blue-700 transition-all flex items-center gap-1 shadow-md shadow-blue-200">
-                            <i data-lucide="sparkles" size="12"></i> AI自動入力
-                        </button>
-                    </div>
+                    <label class="block text-[10px] font-black text-blue-700 uppercase tracking-widest flex items-center gap-1 mb-1.5 ml-1">
+                        <i data-lucide="link" size="12"></i> 公式サイト・まとめ記事等のURL
+                    </label>
                     <div class="relative">
-                        <input type="url" id="addUrl" class="w-full pl-4 pr-10 py-3 bg-white border border-blue-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm font-medium" placeholder="URLを入力して自動入力ボタンを押す">
+                        <input type="url" id="addUrl" class="w-full pl-4 pr-10 py-3 bg-white border border-blue-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm font-medium" placeholder="URLを入力してAIボタンを押す">
                         <button type="button" id="clear_addUrl" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300 hidden"><i data-lucide="x-circle" size="18"></i></button>
                     </div>
                 </div>
 
                 <div>
-                    <label class="block text-xs font-black text-slate-500 mb-1.5 ml-1 uppercase tracking-widest">タイトル *</label>
+                    <div class="flex justify-between items-center mb-1.5 ml-1">
+                        <label class="block text-xs font-black text-slate-500 uppercase tracking-widest">タイトル *</label>
+                        <button type="button" id="generateTitleBtn" class="text-[10px] font-bold bg-blue-100 text-blue-700 px-3 py-1.5 rounded-lg hover:bg-blue-200 transition-all flex items-center gap-1 shadow-sm">
+                            <i data-lucide="sparkles" size="12"></i> AIタイトル抽出
+                        </button>
+                    </div>
                     <div class="relative">
                         <input type="text" id="addTitle" class="w-full pl-4 pr-10 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none font-medium text-slate-800" placeholder="例：中華そば 高野">
                         <button type="button" id="clear_addTitle" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300 hidden"><i data-lucide="x-circle" size="20"></i></button>
@@ -336,7 +336,12 @@
                 </div>
 
                 <div>
-                    <label class="block text-xs font-black text-slate-500 mb-1.5 ml-1 uppercase tracking-widest">メモ</label>
+                    <div class="flex justify-between items-center mb-1.5 ml-1">
+                        <label class="block text-xs font-black text-slate-500 uppercase tracking-widest">メモ</label>
+                        <button type="button" id="generateMemoBtn" class="text-[10px] font-bold bg-blue-100 text-blue-700 px-3 py-1.5 rounded-lg hover:bg-blue-200 transition-all flex items-center gap-1 shadow-sm">
+                            <i data-lucide="sparkles" size="12"></i> AIメモ要約
+                        </button>
+                    </div>
                     <div class="relative">
                         <textarea id="addText" rows="4" class="w-full pl-4 pr-10 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none resize-none leading-relaxed text-sm" placeholder="感想など"></textarea>
                         <button type="button" id="clear_addText" class="absolute right-3 top-4 text-slate-300 hidden"><i data-lucide="x-circle" size="20"></i></button>
@@ -528,7 +533,7 @@
                 btn.classList.add('text-slate-400', 'bg-slate-50');
             }
 
-            ['generateMetaBtn', 'generateMapBtn', 'generateImageBtn'].forEach(id => {
+            ['generateTitleBtn', 'generateMemoBtn', 'generateMapBtn', 'generateImageBtn'].forEach(id => {
                 const el = document.getElementById(id);
                 if (el) {
                     if (hasKey) {
@@ -720,54 +725,95 @@
             }
         }
 
-        async function handleAiMetaGeneration() {
+        async function handleAiTitleGeneration() {
             if (!hasApiKey()) {
                 showMsg("AI機能を利用するにはAPIキーを設定してください", true);
                 document.getElementById('settingsModal').classList.remove('hidden');
                 return;
             }
             const url = document.getElementById('addUrl').value.trim();
-            const btn = document.getElementById('generateMetaBtn');
+            const memoText = document.getElementById('addText').value.trim();
+            const btn = document.getElementById('generateTitleBtn');
             if (!url) {
                 showMsg("URLを入力してください。", true);
                 return;
             }
             btn.classList.add('btn-loading');
             const originalInner = btn.innerHTML;
-            btn.innerHTML = `<i data-lucide="loader-2" class="animate-spin" size="12"></i> 自動入力中...`;
+            btn.innerHTML = `<i data-lucide="loader-2" class="animate-spin" size="12"></i> 抽出中...`;
             if (window.lucide) lucide.createIcons();
             
-            const sys = `あなたは情報整理のプロフェッショナルです。提供されたURLをGoogle検索などを用いて分析し、以下のJSON形式で回答してください。
-必ずJSONのみ出力してください。
-{
-  "title": "サイトや場所の正確な名称（ページタイトルから抽出）",
-  "memo": "URLの内容に応じた要約テキスト。施設なら【営業時間】【料金】、レストランなら【営業時間】【予約】、レシピなら【材料】【手順の概要】、その他なら一般的な概要を箇条書きなどでわかりやすくまとめること。"
-}`;
-            const user = `以下のURLについて調べて、情報を抽出してください。\nURL: ${url}`;
+            const sys = `あなたは情報整理のプロフェッショナルです。提供されたURLをGoogle検索などを用いて分析し、適切なタイトルを生成してください。
+必ず以下のJSON形式でのみ出力してください。
+{"title": "サイトや特定の場所の正確な名称"}`;
+            let user = `以下のURLについて調べて、タイトルを抽出してください。\nURL: ${url}`;
+            if (memoText) {
+                user += `\n\nまた、すでに以下のメモが入力されています。もしURL先がまとめ記事など複数の場所を紹介しているページの場合は、このメモの内容に合致する「特定の場所や店舗の名前」をタイトルとして抽出してください。\nメモ: ${memoText}`;
+            }
             
             try {
                 const result = await safeCallGemini(user, sys, true);
                 let jsonStr = result?.trim().replace(/```json/gi, '').replace(/```/g, '').trim();
                 let data = JSON.parse(jsonStr);
                 
-                let updated = false;
                 if (data && data.title) {
                     document.getElementById('addTitle').value = data.title;
                     document.getElementById('clear_addTitle')?.classList.remove('hidden');
-                    updated = true;
+                    showMsg("タイトルを自動抽出しました！");
+                } else {
+                    showMsg("タイトルが見つかりませんでした", true);
                 }
+            } catch (err) { 
+                showMsg("抽出に失敗しました", true); 
+                console.error(err);
+            } finally {
+                btn.classList.remove('btn-loading'); 
+                btn.innerHTML = originalInner;
+                if (window.lucide) lucide.createIcons();
+            }
+        }
+
+        async function handleAiMemoGeneration() {
+            if (!hasApiKey()) {
+                showMsg("AI機能を利用するにはAPIキーを設定してください", true);
+                document.getElementById('settingsModal').classList.remove('hidden');
+                return;
+            }
+            const url = document.getElementById('addUrl').value.trim();
+            const title = document.getElementById('addTitle').value.trim();
+            const btn = document.getElementById('generateMemoBtn');
+            if (!url) {
+                showMsg("URLを入力してください。", true);
+                return;
+            }
+            btn.classList.add('btn-loading');
+            const originalInner = btn.innerHTML;
+            btn.innerHTML = `<i data-lucide="loader-2" class="animate-spin" size="12"></i> 要約中...`;
+            if (window.lucide) lucide.createIcons();
+            
+            const sys = `あなたは情報整理のプロフェッショナルです。提供されたURLをGoogle検索などを用いて分析し、要約テキストを生成してください。
+施設なら【営業時間】【料金】、レストランなら【営業時間】【予約可否】などを箇条書きで分かりやすくまとめること。
+必ず以下のJSON形式でのみ出力してください。
+{"memo": "要約テキスト"}`;
+            let user = `以下のURLについて調べて、情報を抽出・要約してください。\nURL: ${url}`;
+            if (title) {
+                user += `\n\nまた、すでに以下のタイトルが入力されています。もしURL先が複数の場所を紹介しているまとめ記事などの場合は、ページ全体ではなく、この「${title}」に関する部分の内容だけを抽出してまとめてください。\nタイトル: ${title}`;
+            }
+            
+            try {
+                const result = await safeCallGemini(user, sys, true);
+                let jsonStr = result?.trim().replace(/```json/gi, '').replace(/```/g, '').trim();
+                let data = JSON.parse(jsonStr);
+                
                 if (data && data.memo) {
                     document.getElementById('addText').value = data.memo;
                     document.getElementById('clear_addText')?.classList.remove('hidden');
-                    updated = true;
-                }
-                if (updated) {
-                    showMsg("タイトルとメモを自動入力しました！");
+                    showMsg("メモを自動要約しました！");
                 } else {
                     showMsg("情報が見つかりませんでした", true);
                 }
             } catch (err) { 
-                showMsg("自動入力に失敗しました", true); 
+                showMsg("要約に失敗しました", true); 
                 console.error(err);
             } finally {
                 btn.classList.remove('btn-loading'); 
@@ -1035,7 +1081,8 @@
             
             document.getElementById('driveSyncBtn').onclick = handleSyncClick;
             
-            document.getElementById('generateMetaBtn').onclick = handleAiMetaGeneration;
+            document.getElementById('generateTitleBtn').onclick = handleAiTitleGeneration;
+            document.getElementById('generateMemoBtn').onclick = handleAiMemoGeneration;
             document.getElementById('generateMapBtn').onclick = handleAiMapGeneration;
             document.getElementById('generateImageBtn').onclick = handleAiImageGeneration;
             
@@ -1598,5 +1645,3 @@
     </script>
 </body>
 </html>
-
-
