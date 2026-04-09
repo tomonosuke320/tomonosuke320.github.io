@@ -1,610 +1,660 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Plus, Play, Edit, Trash2, Download, Upload, X, Box, Code, AlertCircle, Info, ChevronLeft, Image as ImageIcon, ArrowUpDown } from 'lucide-react';
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WebApp Hub</title>
 
-// --- Helper Functions ---
-const generateId = () => crypto.randomUUID();
-
-// アプリ名からグラデーションカラーを決定する関数
-const getColorFromName = (name) => {
-  if (!name) return 'from-slate-500 to-slate-600';
-  const colors = [
-    'from-red-400 to-rose-600',
-    'from-orange-400 to-red-500',
-    'from-amber-400 to-orange-500',
-    'from-emerald-400 to-teal-600',
-    'from-cyan-400 to-blue-600',
-    'from-blue-500 to-indigo-600',
-    'from-violet-500 to-purple-600',
-    'from-fuchsia-400 to-pink-600'
-  ];
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) {
-    hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  return colors[Math.abs(hash) % colors.length];
-};
-
-// --- Custom Modal Components ---
-const Overlay = ({ children, zIndex = "z-50" }) => (
-  <div className={`fixed inset-0 bg-slate-900/60 backdrop-blur-sm ${zIndex} flex items-center justify-center p-4 animate-in fade-in duration-200`}>
-    {children}
-  </div>
-);
-
-export default function App() {
-  const [apps, setApps] = useState([]);
-  const [isReady, setIsReady] = useState(false);
-  const [sortOption, setSortOption] = useState('date-asc'); // 並び替え設定
+  <!-- PWA & App Icons -->
+  <meta name="theme-color" content="#4f46e5">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%234f46e5' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z'%3E%3C/path%3E%3Cpolyline points='3.27 6.96 12 12.01 20.73 6.96'%3E%3C/polyline%3E%3Cline x1='12' y1='22.08' x2='12' y2='12'%3E%3C/line%3E%3C/svg%3E">
+  <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%234f46e5' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z'%3E%3C/path%3E%3Cpolyline points='3.27 6.96 12 12.01 20.73 6.96'%3E%3C/polyline%3E%3Cline x1='12' y1='22.08' x2='12' y2='12'%3E%3C/line%3E%3C/svg%3E">
+  <link rel="manifest" href="data:application/manifest+json,%7B%0A%20%20%22name%22%3A%20%22WebApp%20Hub%22%2C%0A%20%20%22short_name%22%3A%20%22WebHub%22%2C%0A%20%20%22start_url%22%3A%20%22.%22%2C%0A%20%20%22display%22%3A%20%22standalone%22%2C%0A%20%20%22background_color%22%3A%20%22%23f8fafc%22%2C%0A%20%20%22theme_color%22%3A%20%22%234f46e5%22%2C%0A%20%20%22icons%22%3A%20%5B%0A%20%20%20%20%7B%0A%20%20%20%20%20%20%22src%22%3A%20%22data%3Aimage%2Fsvg%2Bxml%2C%253Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%2024%2024%27%20fill%3D%27none%27%20stroke%3D%27%25234f46e5%27%20stroke-width%3D%272%27%20stroke-linecap%3D%27round%27%20stroke-linejoin%3D%27round%27%253E%253Cpath%20d%3D%27M21%2016V8a2%202%200%200%200-1-1.73l-7-4a2%202%200%200%200-2%200l-7%204A2%202%200%200%200%203%208v8a2%202%200%200%200%201%201.73l7%204a2%202%200%200%200%202%200l7-4A2%202%200%200%200%2021%2016z%27%253E%253C%2Fpath%253E%253Cpolyline%20points%3D%273.27%206.96%2012%2012.01%2020.73%206.96%27%253E%253C%2Fpolyline%253E%253Cline%20x1%3D%2712%27%20y1%3D%2722.08%27%20x2%3D%2712%27%20y2%3D%2712%27%253E%253C%2Fline%253E%253C%2Fsvg%253E%22%2C%0A%20%20%20%20%20%20%22sizes%22%3A%20%22192x192%20512x512%22%2C%0A%20%20%20%20%20%20%22type%22%3A%20%22image%2Fsvg%2Bxml%22%2C%0A%20%20%20%20%20%20%22purpose%22%3A%20%22any%20maskable%22%0A%20%20%20%20%7D%0A%20%20%5D%0A%7D">
   
-  // States for main features
-  const [runningApp, setRunningApp] = useState(null);
-  const [isEditorOpen, setIsEditorOpen] = useState(false);
-  const [editingApp, setEditingApp] = useState(null);
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
   
-  // Form states
-  const [formName, setFormName] = useState('');
-  const [formHtml, setFormHtml] = useState('');
-  const [formImageUrl, setFormImageUrl] = useState('');
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
 
-  // Dialog states
-  const [alertInfo, setAlertInfo] = useState(null);
-  const [confirmInfo, setConfirmInfo] = useState(null);
-  const [importPendingData, setImportPendingData] = useState(null);
-  
-  const fileInputRef = useRef(null);
-  const imageInputRef = useRef(null);
-
-  // Initial load
-  useEffect(() => {
-    const savedData = localStorage.getItem('webapp_hub_data');
-    if (savedData) {
-      try {
-        const parsed = JSON.parse(savedData);
-        if (Array.isArray(parsed)) {
-          setApps(parsed);
-        }
-      } catch (e) {
-        console.error('Failed to load apps from localStorage', e);
-      }
+  <style>
+    /* アニメーション用クラス */
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
     }
-    const savedSort = localStorage.getItem('webapp_hub_sort');
-    if (savedSort) {
-      setSortOption(savedSort);
+    @keyframes zoomIn {
+      from { opacity: 0; transform: scale(0.95); }
+      to { opacity: 1; transform: scale(1); }
     }
-    setIsReady(true);
-  }, []);
-
-  // Save on change
-  useEffect(() => {
-    if (isReady) {
-      localStorage.setItem('webapp_hub_data', JSON.stringify(apps));
-    }
-  }, [apps, isReady]);
-
-  useEffect(() => {
-    if (isReady) {
-      localStorage.setItem('webapp_hub_sort', sortOption);
-    }
-  }, [sortOption, isReady]);
-
-  // --- Handlers ---
-  
-  const openEditor = (app = null, e = null) => {
-    if (e) e.stopPropagation();
-    setEditingApp(app);
-    setFormName(app ? app.name : '');
-    setFormHtml(app ? app.html : '<!DOCTYPE html>\n<html lang="ja">\n<head>\n  <meta charset="UTF-8">\n  <meta name="viewport" content="width=device-width, initial-scale=1.0">\n  <title>New App</title>\n  <style>\n    body { font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background-color: #f0f8ff; }\n    h1 { color: #333; }\n  </style>\n</head>\n<body>\n  <h1>Hello World!</h1>\n  <script>\n    // Your JavaScript here\n  </script>\n</body>\n</html>');
-    setFormImageUrl(app && app.imageUrl ? app.imageUrl : '');
-    setIsEditorOpen(true);
-  };
-
-  const closeEditor = () => {
-    setIsEditorOpen(false);
-    setEditingApp(null);
-  };
-
-  const saveApp = () => {
-    if (!formName.trim() || !formHtml.trim()) {
-      setAlertInfo('アプリ名とHTMLコードは両方入力してください。');
-      return;
-    }
-
-    if (editingApp) {
-      setApps(apps.map(a => a.id === editingApp.id ? { ...a, name: formName, html: formHtml, imageUrl: formImageUrl } : a));
-    } else {
-      setApps([...apps, {
-        id: generateId(),
-        name: formName,
-        html: formHtml,
-        imageUrl: formImageUrl,
-        createdAt: Date.now()
-      }]);
-    }
-    closeEditor();
-  };
-
-  const requestDelete = (app, e) => {
-    e.stopPropagation();
-    setConfirmInfo({
-      title: 'アプリの削除',
-      message: `「${app.name}」を削除してもよろしいですか？この操作は元に戻せません。`,
-      onConfirm: () => {
-        setApps(apps.filter(a => a.id !== app.id));
-        setConfirmInfo(null);
-      }
-    });
-  };
-
-  const handleExport = () => {
-    if (apps.length === 0) {
-      setAlertInfo('エクスポートするアプリがありません。');
-      return;
-    }
-    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(apps, null, 2));
-    const a = document.createElement('a');
-    a.href = dataStr;
-    a.download = `webapp_hub_backup_${new Date().toISOString().slice(0,10)}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-  };
-
-  const triggerImport = () => {
-    if (fileInputRef.current) {
-      fileInputRef.current.click();
-    }
-  };
-
-  const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      try {
-        const data = JSON.parse(event.target.result);
-        if (!Array.isArray(data)) throw new Error("Data is not an array");
-        
-        // Basic validation
-        const isValid = data.every(item => item.id && item.name && typeof item.html === 'string');
-        if (!isValid) throw new Error("Invalid item format");
-
-        setImportPendingData(data);
-      } catch (err) {
-        setAlertInfo('無効なJSONファイルです。正しいバックアップファイルを選択してください。');
-      }
-    };
-    reader.readAsText(file);
-    e.target.value = ''; // reset
-  };
-
-  const executeImport = (mode) => {
-    if (!importPendingData) return;
+    .animate-fade-in { animation: fadeIn 0.2s ease-out forwards; }
+    .animate-zoom-in { animation: zoomIn 0.2s ease-out forwards; }
     
-    if (mode === 'overwrite') {
-      setApps(importPendingData);
-    } else if (mode === 'append') {
-      // IDの衝突を避けるために新しいIDを振る
-      const newApps = importPendingData.map(app => ({...app, id: generateId(), createdAt: Date.now()}));
-      setApps([...apps, ...newApps]);
-    }
-    setImportPendingData(null);
-  };
+    /* スクロールバーのスタイル（任意） */
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+  </style>
+</head>
+<body class="bg-slate-100/50 text-slate-800 font-sans selection:bg-indigo-100 min-h-screen">
 
-  // 画像アップロードとリサイズ処理
-  const handleImageUpload = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    
-    // 画像形式のチェック
-    if (!file.type.match('image.*')) {
-      setAlertInfo('画像ファイルを選択してください。');
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        const maxSize = 200; // サムネイルの最大サイズ(px)
-        let width = img.width;
-        let height = img.height;
-
-        if (width > height) {
-          if (width > maxSize) {
-            height *= maxSize / width;
-            width = maxSize;
-          }
-        } else {
-          if (height > maxSize) {
-            width *= maxSize / height;
-            height = maxSize;
-          }
-        }
-
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, width, height);
-        
-        // WebP形式などで軽量化してDataURL化
-        const dataUrl = canvas.toDataURL('image/webp', 0.8);
-        setFormImageUrl(dataUrl);
-      };
-      img.src = event.target.result;
-    };
-    reader.readAsDataURL(file);
-    e.target.value = ''; // reset
-  };
-
-  // --- Sorting ---
-  const sortedApps = [...apps].sort((a, b) => {
-    if (sortOption === 'name-asc') return a.name.localeCompare(b.name, 'ja');
-    if (sortOption === 'name-desc') return b.name.localeCompare(a.name, 'ja');
-    if (sortOption === 'date-asc') return (a.createdAt || 0) - (b.createdAt || 0);
-    if (sortOption === 'date-desc') return (b.createdAt || 0) - (a.createdAt || 0);
-    return 0;
-  });
-
-  // --- Render Functions ---
-
-  // 実行画面モード
-  if (runningApp) {
-    return (
-      <div className="fixed inset-0 bg-white z-[100] flex flex-col">
-        {/* App Action Bar */}
-        <div className="h-14 bg-slate-900 text-white flex items-center justify-between px-4 shadow-md shrink-0">
-          <div className="flex items-center gap-3">
-            <button 
-              onClick={() => setRunningApp(null)}
-              className="p-2 -ml-2 hover:bg-slate-800 rounded-lg transition-colors flex items-center gap-1 text-slate-300 hover:text-white"
-            >
-              <ChevronLeft size={20} />
-              <span className="text-sm font-medium hidden sm:inline">ホームに戻る</span>
-            </button>
-            <div className="w-px h-6 bg-slate-700 hidden sm:block"></div>
-            <span className="font-bold text-lg truncate max-w-[200px] sm:max-w-md">
-              {runningApp.name}
-            </span>
+  <!-- ====================
+       メイン画面
+  ==================== -->
+  <div id="main-view">
+    <!-- Header -->
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-10 shadow-sm">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex flex-wrap items-center justify-between gap-4">
+        <div class="flex items-center gap-2 text-indigo-600">
+          <div class="bg-indigo-100 p-2 rounded-xl">
+            <i data-lucide="box" class="w-6 h-6" stroke-width="2.5"></i>
           </div>
-          <button 
-             onClick={() => setRunningApp(null)}
-             className="p-2 hover:bg-slate-800 rounded-full transition-colors bg-slate-800/50"
-             title="閉じる"
-          >
-            <X size={20} />
-          </button>
+          <h1 class="text-xl font-bold tracking-tight hidden sm:block">WebApp Hub</h1>
         </div>
         
-        {/* App Sandbox */}
-        <div className="flex-1 w-full bg-white relative">
-          <iframe 
-            srcDoc={runningApp.html} 
-            className="absolute inset-0 w-full h-full border-none"
-            sandbox="allow-scripts allow-forms allow-modals"
-            title={runningApp.name}
-          />
+        <div class="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0">
+          <!-- 並び替え -->
+          <div class="flex items-center bg-slate-50 border border-slate-200 rounded-lg px-2 shadow-sm mr-2 shrink-0">
+            <i data-lucide="arrow-up-down" class="w-4 h-4 text-slate-400 mr-1"></i>
+            <select id="sort-select" class="bg-transparent text-sm text-slate-600 py-2 focus:outline-none cursor-pointer">
+              <option value="date-asc">登録日 (古い順)</option>
+              <option value="date-desc">登録日 (新しい順)</option>
+              <option value="name-asc">名前 (昇順)</option>
+              <option value="name-desc">名前 (降順)</option>
+            </select>
+          </div>
+
+          <!-- インポート/エクスポート -->
+          <input type="file" accept=".json" id="import-file-input" class="hidden" />
+          <button id="btn-import" class="flex items-center gap-2 px-3 py-2 text-sm font-medium bg-white hover:bg-slate-50 text-slate-600 border border-slate-200 rounded-lg transition-colors shadow-sm shrink-0">
+            <i data-lucide="upload" class="w-4 h-4"></i> <span class="hidden sm:inline">インポート</span>
+          </button>
+          <button id="btn-export" class="flex items-center gap-2 px-3 py-2 text-sm font-medium bg-white hover:bg-slate-50 text-slate-600 border border-slate-200 rounded-lg transition-colors shadow-sm shrink-0">
+            <i data-lucide="download" class="w-4 h-4"></i> <span class="hidden sm:inline">エクスポート</span>
+          </button>
         </div>
       </div>
-    );
-  }
+    </header>
 
-  // メイン画面
-  return (
-    <div className="min-h-screen bg-slate-100/50 text-slate-800 font-sans selection:bg-indigo-100">
-      
-      {/* Header */}
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-10 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-2 text-indigo-600">
-            <div className="bg-indigo-100 p-2 rounded-xl">
-              <Box className="w-6 h-6" strokeWidth={2.5} />
-            </div>
-            <h1 className="text-xl font-bold tracking-tight hidden sm:block">WebApp Hub</h1>
-          </div>
-          
-          <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0">
-            <div className="flex items-center bg-slate-50 border border-slate-200 rounded-lg px-2 shadow-sm mr-2 shrink-0">
-              <ArrowUpDown size={14} className="text-slate-400 mr-1" />
-              <select 
-                value={sortOption}
-                onChange={(e) => setSortOption(e.target.value)}
-                className="bg-transparent text-sm text-slate-600 py-2 focus:outline-none cursor-pointer"
-              >
-                <option value="date-asc">登録日 (古い順)</option>
-                <option value="date-desc">登録日 (新しい順)</option>
-                <option value="name-asc">名前 (昇順)</option>
-                <option value="name-desc">名前 (降順)</option>
-              </select>
-            </div>
+    <!-- Main Content (Speed Dial) -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+      <div id="app-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 sm:gap-6">
+        <!-- アプリタイルがここに動的に挿入されます -->
+      </div>
+    </main>
+  </div>
 
-            <input 
-              type="file" 
-              accept=".json" 
-              ref={fileInputRef} 
-              className="hidden" 
-              onChange={handleFileChange} 
-            />
-            <button 
-              onClick={triggerImport}
-              className="flex items-center gap-2 px-3 py-2 text-sm font-medium bg-white hover:bg-slate-50 text-slate-600 border border-slate-200 rounded-lg transition-colors shadow-sm shrink-0"
-            >
-              <Upload size={16} /> <span className="hidden sm:inline">インポート</span>
-            </button>
-            <button 
-              onClick={handleExport}
-              className="flex items-center gap-2 px-3 py-2 text-sm font-medium bg-white hover:bg-slate-50 text-slate-600 border border-slate-200 rounded-lg transition-colors shadow-sm shrink-0"
-            >
-              <Download size={16} /> <span className="hidden sm:inline">エクスポート</span>
-            </button>
-          </div>
-        </div>
-      </header>
-
-      {/* Main Content (Speed Dial) */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 sm:gap-6">
-          
-          {/* Add Button Tile */}
-          <button 
-            onClick={() => openEditor()}
-            className="aspect-square flex flex-col items-center justify-center gap-4 rounded-3xl bg-slate-50 border-2 border-dashed border-slate-300 text-slate-500 hover:bg-white hover:border-indigo-400 hover:text-indigo-600 transition-all shadow-sm hover:shadow-md group"
-          >
-            <div className="w-16 h-16 rounded-2xl bg-slate-200/50 flex items-center justify-center group-hover:bg-indigo-100 group-hover:scale-110 transition-all duration-300">
-              <Plus size={32} strokeWidth={2.5} />
-            </div>
-            <span className="font-semibold text-sm">アプリを追加</span>
-          </button>
-
-          {/* App Tiles */}
-          {sortedApps.map(app => (
-            <div 
-              key={app.id}
-              onClick={() => setRunningApp(app)}
-              className="aspect-square relative group rounded-3xl bg-white shadow-sm hover:shadow-xl border border-slate-200 transition-all duration-300 cursor-pointer flex flex-col items-center justify-center p-4 hover:-translate-y-1"
-            >
-              {/* Context Actions */}
-              <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
-                <button 
-                  onClick={(e) => openEditor(app, e)}
-                  className="p-2 bg-white/90 backdrop-blur rounded-xl text-slate-500 hover:text-blue-600 shadow-sm border border-slate-100 hover:bg-blue-50 transition-colors"
-                  title="編集"
-                >
-                  <Edit size={16} />
-                </button>
-                <button 
-                  onClick={(e) => requestDelete(app, e)}
-                  className="p-2 bg-white/90 backdrop-blur rounded-xl text-slate-500 hover:text-red-600 shadow-sm border border-slate-100 hover:bg-red-50 transition-colors"
-                  title="削除"
-                >
-                  <Trash2 size={16} />
-                </button>
-              </div>
-
-              {/* App Icon */}
-              <div className={`w-20 h-20 rounded-2xl ${app.imageUrl ? 'bg-slate-100' : 'bg-gradient-to-br ' + getColorFromName(app.name)} text-white flex items-center justify-center text-3xl font-bold shadow-lg mb-4 group-hover:scale-105 transition-transform duration-300 ring-4 ring-white overflow-hidden`}>
-                {app.imageUrl ? (
-                  <img src={app.imageUrl} alt={app.name} className="w-full h-full object-cover" />
-                ) : (
-                  app.name.substring(0, 2).toUpperCase()
-                )}
-              </div>
-              
-              {/* App Name */}
-              <h3 className="font-semibold text-slate-800 text-center w-full truncate px-2">
-                {app.name}
-              </h3>
-
-              {/* Play Overlay Element */}
-              <div className="absolute inset-0 bg-gradient-to-t from-white via-white/80 to-transparent flex items-end justify-center pb-6 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none rounded-3xl">
-                 <span className="flex items-center gap-1 text-sm font-bold text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-full shadow-sm transform translate-y-2 group-hover:translate-y-0 transition-transform duration-300">
-                    <Play size={14} fill="currentColor" /> 起動する
-                 </span>
-              </div>
-            </div>
-          ))}
-        </div>
-      </main>
-
-      {/* --- Modals --- */}
-
-      {/* Add/Edit Modal */}
-      {isEditorOpen && (
-        <Overlay zIndex="z-50">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
-            {/* Modal Header */}
-            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/80 backdrop-blur-sm shrink-0">
-              <h2 className="text-xl font-bold text-slate-800 flex items-center gap-3">
-                <div className="bg-indigo-100 p-1.5 rounded-lg text-indigo-600">
-                  <Code size={20} />
-                </div>
-                {editingApp ? 'アプリを編集' : '新規アプリを登録'}
-              </h2>
-              <button 
-                onClick={closeEditor} 
-                className="p-2 text-slate-400 hover:bg-slate-200 hover:text-slate-600 rounded-full transition-colors"
-              >
-                <X size={24} />
-              </button>
-            </div>
-            
-            {/* Modal Body */}
-            <div className="p-6 flex-1 overflow-y-auto bg-slate-50 flex flex-col gap-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* 左カラム：基本情報 */}
-                <div className="flex flex-col gap-4">
-                  <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-2">アプリ名</label>
-                    <input 
-                      type="text" 
-                      value={formName}
-                      onChange={(e) => setFormName(e.target.value)}
-                      placeholder="例: ポモドーロタイマー"
-                      className="w-full px-4 py-3 bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all font-medium"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-2">アイコン画像 (任意)</label>
-                    <div className="flex gap-4 items-start">
-                      <div className="w-20 h-20 shrink-0 rounded-2xl bg-slate-100 border border-slate-200 overflow-hidden flex items-center justify-center shadow-inner">
-                        {formImageUrl ? (
-                          <img src={formImageUrl} alt="Preview" className="w-full h-full object-cover" />
-                        ) : (
-                          <ImageIcon size={32} className="text-slate-300" />
-                        )}
-                      </div>
-                      <div className="flex-1 flex flex-col gap-2">
-                        <input 
-                          type="text" 
-                          value={formImageUrl}
-                          onChange={(e) => setFormImageUrl(e.target.value)}
-                          placeholder="画像URLを入力..."
-                          className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
-                        />
-                        <div className="flex items-center gap-2">
-                          <input 
-                            type="file" 
-                            accept="image/*" 
-                            ref={imageInputRef} 
-                            onChange={handleImageUpload}
-                            className="hidden" 
-                          />
-                          <button 
-                            onClick={() => imageInputRef.current?.click()}
-                            className="text-xs font-medium bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 py-1.5 rounded-lg transition-colors"
-                          >
-                            ファイルから選択
-                          </button>
-                          {formImageUrl && (
-                            <button 
-                              onClick={() => setFormImageUrl('')}
-                              className="text-xs font-medium text-red-500 hover:bg-red-50 px-3 py-1.5 rounded-lg transition-colors"
-                            >
-                              クリア
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                    <p className="text-xs text-slate-500 mt-2">※ファイルを選択すると自動的にリサイズされて保存されます。</p>
-                  </div>
-                </div>
-                
-                {/* 右カラム：HTML入力 */}
-                <div className="flex-1 flex flex-col h-full min-h-[300px] md:min-h-0">
-                  <label className="block text-sm font-semibold text-slate-700 mb-2 flex justify-between items-end">
-                    <span>HTMLコード</span>
-                    <span className="text-xs font-normal text-slate-500 bg-slate-200/50 px-2 py-1 rounded-md hidden sm:inline-block">
-                      &lt;style&gt; / &lt;script&gt; 可
-                    </span>
-                  </label>
-                  <textarea 
-                    value={formHtml}
-                    onChange={(e) => setFormHtml(e.target.value)}
-                    className="w-full flex-1 min-h-[250px] font-mono text-sm px-4 py-4 bg-slate-900 text-slate-100 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all resize-none shadow-inner leading-relaxed"
-                    spellCheck="false"
-                  ></textarea>
-                </div>
-              </div>
-            </div>
-
-            {/* Modal Footer */}
-            <div className="px-6 py-4 border-t border-slate-100 bg-white flex justify-end gap-3 shrink-0">
-              <button 
-                onClick={closeEditor}
-                className="px-6 py-2.5 text-slate-600 hover:bg-slate-100 bg-white border border-slate-200 rounded-xl font-medium transition-colors"
-              >
-                キャンセル
-              </button>
-              <button 
-                onClick={saveApp}
-                disabled={!formName.trim() || !formHtml.trim()}
-                className="px-6 py-2.5 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-md shadow-indigo-200"
-              >
-                保存して登録
-              </button>
-            </div>
-          </div>
-        </Overlay>
-      )}
-
-      {/* Import Options Modal */}
-      {importPendingData && (
-        <Overlay zIndex="z-[60]">
-          <div className="bg-white p-6 rounded-3xl shadow-xl max-w-md w-full animate-in zoom-in-95 duration-200">
-            <h3 className="text-xl font-bold text-slate-800 mb-2">インポート方法の選択</h3>
-            <p className="text-slate-600 text-sm mb-6">
-              {importPendingData.length} 件のアプリデータが見つかりました。どのように読み込みますか？
-            </p>
-            <div className="flex flex-col gap-3">
-              <button 
-                onClick={() => executeImport('append')}
-                className="w-full text-left p-4 rounded-xl border border-slate-200 hover:border-indigo-400 hover:bg-indigo-50 transition-colors group"
-              >
-                <div className="font-semibold text-slate-800 group-hover:text-indigo-700">現在のリストに追加</div>
-                <div className="text-xs text-slate-500 mt-1">既存のアプリを残したまま、新しく追加します。</div>
-              </button>
-              <button 
-                onClick={() => executeImport('overwrite')}
-                className="w-full text-left p-4 rounded-xl border border-slate-200 hover:border-red-400 hover:bg-red-50 transition-colors group"
-              >
-                <div className="font-semibold text-slate-800 group-hover:text-red-700">上書きする</div>
-                <div className="text-xs text-slate-500 mt-1">現在のアプリリストを全て削除し、置き換えます。</div>
-              </button>
-              <button 
-                onClick={() => setImportPendingData(null)}
-                className="w-full mt-2 p-3 rounded-xl font-medium text-slate-600 hover:bg-slate-100 transition-colors text-center"
-              >
-                キャンセル
-              </button>
-            </div>
-          </div>
-        </Overlay>
-      )}
-
-      {/* Alert Modal */}
-      {alertInfo && (
-        <Overlay zIndex="z-[70]">
-          <div className="bg-white p-6 rounded-3xl shadow-xl max-w-sm w-full text-center animate-in zoom-in-95 duration-200">
-            <div className="mx-auto w-12 h-12 bg-amber-100 text-amber-500 rounded-full flex items-center justify-center mb-4">
-              <AlertCircle size={28} />
-            </div>
-            <p className="text-slate-800 font-medium mb-6">{alertInfo}</p>
-            <button 
-              onClick={() => setAlertInfo(null)}
-              className="w-full py-2.5 bg-slate-900 text-white rounded-xl font-medium hover:bg-slate-800 transition-colors"
-            >
-              OK
-            </button>
-          </div>
-        </Overlay>
-      )}
-
-      {/* Confirm Modal */}
-      {confirmInfo && (
-        <Overlay zIndex="z-[70]">
-          <div className="bg-white p-6 rounded-3xl shadow-xl max-w-sm w-full animate-in zoom-in-95 duration-200">
-            <h3 className="text-lg font-bold text-slate-800 mb-2">{confirmInfo.title}</h3>
-            <p className="text-slate-600 text-sm mb-6">{confirmInfo.message}</p>
-            <div className="flex gap-3 justify-end">
-              <button 
-                onClick={() => setConfirmInfo(null)}
-                className="px-4 py-2 text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg font-medium transition-colors"
-              >
-                キャンセル
-              </button>
-              <button 
-                onClick={confirmInfo.onConfirm}
-                className="px-4 py-2 bg-red-600 text-white hover:bg-red-700 rounded-lg font-medium transition-colors shadow-sm"
-              >
-                削除する
-              </button>
-            </div>
-          </div>
-        </Overlay>
-      )}
-
+  <!-- ====================
+       実行画面
+  ==================== -->
+  <div id="runner-view" class="fixed inset-0 bg-white z-[100] flex-col hidden animate-fade-in">
+    <!-- Action Bar -->
+    <div class="h-14 bg-slate-900 text-white flex items-center justify-between px-4 shadow-md shrink-0">
+      <div class="flex items-center gap-3">
+        <button id="btn-close-runner-top" class="p-2 -ml-2 hover:bg-slate-800 rounded-lg transition-colors flex items-center gap-1 text-slate-300 hover:text-white">
+          <i data-lucide="chevron-left" class="w-5 h-5"></i>
+          <span class="text-sm font-medium hidden sm:inline">ホームに戻る</span>
+        </button>
+        <div class="w-px h-6 bg-slate-700 hidden sm:block"></div>
+        <span id="runner-title" class="font-bold text-lg truncate max-w-[200px] sm:max-w-md">AppName</span>
+      </div>
+      <button id="btn-close-runner" class="p-2 hover:bg-slate-800 rounded-full transition-colors bg-slate-800/50" title="閉じる">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
     </div>
-  );
-}
+    
+    <!-- Sandbox -->
+    <div class="flex-1 w-full bg-white relative">
+      <iframe id="runner-iframe" class="absolute inset-0 w-full h-full border-none" sandbox="allow-scripts allow-forms allow-modals"></iframe>
+    </div>
+  </div>
+
+
+  <!-- ====================
+       モーダル群
+  ==================== -->
+  
+  <!-- Add/Edit Modal -->
+  <div id="editor-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 items-center justify-center p-4 hidden animate-fade-in">
+    <div class="bg-white rounded-3xl shadow-2xl w-full max-w-4xl h-[90vh] flex flex-col overflow-hidden animate-zoom-in">
+      <!-- Header -->
+      <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/80 backdrop-blur-sm shrink-0">
+        <h2 class="text-xl font-bold text-slate-800 flex items-center gap-3">
+          <div class="bg-indigo-100 p-1.5 rounded-lg text-indigo-600">
+            <i data-lucide="code" class="w-5 h-5"></i>
+          </div>
+          <span id="editor-title">新規アプリを登録</span>
+        </h2>
+        <button id="btn-close-editor" class="p-2 text-slate-400 hover:bg-slate-200 hover:text-slate-600 rounded-full transition-colors">
+          <i data-lucide="x" class="w-6 h-6"></i>
+        </button>
+      </div>
+      
+      <!-- Body -->
+      <div class="p-6 flex-1 overflow-y-auto bg-slate-50 flex flex-col gap-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <!-- 左カラム：基本情報 -->
+          <div class="flex flex-col gap-4">
+            <div>
+              <label class="block text-sm font-semibold text-slate-700 mb-2">アプリ名</label>
+              <input type="text" id="editor-name" placeholder="例: ポモドーロタイマー" class="w-full px-4 py-3 bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all font-medium" />
+            </div>
+            <div>
+              <label class="block text-sm font-semibold text-slate-700 mb-2">アイコン画像 (任意)</label>
+              <div class="flex gap-4 items-start">
+                <div id="editor-image-preview-container" class="w-20 h-20 shrink-0 rounded-2xl bg-slate-100 border border-slate-200 overflow-hidden flex items-center justify-center shadow-inner">
+                  <!-- JSで中身を切り替え -->
+                </div>
+                <div class="flex-1 flex flex-col gap-2">
+                  <input type="text" id="editor-image-url" placeholder="画像URLを入力..." class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50" />
+                  <div class="flex items-center gap-2">
+                    <input type="file" accept="image/*" id="editor-image-file" class="hidden" />
+                    <button id="btn-trigger-file" class="text-xs font-medium bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 py-1.5 rounded-lg transition-colors">
+                      ファイルから選択
+                    </button>
+                    <button id="btn-clear-image" class="text-xs font-medium text-red-500 hover:bg-red-50 px-3 py-1.5 rounded-lg transition-colors hidden">
+                      クリア
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <p class="text-xs text-slate-500 mt-2">※ファイルを選択すると自動的にリサイズされて保存されます。</p>
+            </div>
+          </div>
+          
+          <!-- 右カラム：HTML入力 -->
+          <div class="flex-1 flex flex-col h-full min-h-[300px] md:min-h-0">
+            <label class="block text-sm font-semibold text-slate-700 mb-2 flex justify-between items-end">
+              <span>HTMLコード</span>
+              <span class="text-xs font-normal text-slate-500 bg-slate-200/50 px-2 py-1 rounded-md hidden sm:inline-block">
+                &lt;style&gt; / &lt;script&gt; 可
+              </span>
+            </label>
+            <textarea id="editor-html" class="w-full flex-1 min-h-[250px] font-mono text-sm px-4 py-4 bg-slate-900 text-slate-100 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all resize-none shadow-inner leading-relaxed" spellcheck="false"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div class="px-6 py-4 border-t border-slate-100 bg-white flex justify-end gap-3 shrink-0">
+        <button id="btn-cancel-editor" class="px-6 py-2.5 text-slate-600 hover:bg-slate-100 bg-white border border-slate-200 rounded-xl font-medium transition-colors">
+          キャンセル
+        </button>
+        <button id="btn-save-editor" class="px-6 py-2.5 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-md shadow-indigo-200">
+          保存して登録
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Import Options Modal -->
+  <div id="import-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[60] items-center justify-center p-4 hidden animate-fade-in">
+    <div class="bg-white p-6 rounded-3xl shadow-xl max-w-md w-full animate-zoom-in">
+      <h3 class="text-xl font-bold text-slate-800 mb-2">インポート方法の選択</h3>
+      <p id="import-msg" class="text-slate-600 text-sm mb-6"></p>
+      <div class="flex flex-col gap-3">
+        <button id="btn-import-append" class="w-full text-left p-4 rounded-xl border border-slate-200 hover:border-indigo-400 hover:bg-indigo-50 transition-colors group">
+          <div class="font-semibold text-slate-800 group-hover:text-indigo-700">現在のリストに追加</div>
+          <div class="text-xs text-slate-500 mt-1">既存のアプリを残したまま、新しく追加します。</div>
+        </button>
+        <button id="btn-import-overwrite" class="w-full text-left p-4 rounded-xl border border-slate-200 hover:border-red-400 hover:bg-red-50 transition-colors group">
+          <div class="font-semibold text-slate-800 group-hover:text-red-700">上書きする</div>
+          <div class="text-xs text-slate-500 mt-1">現在のアプリリストを全て削除し、置き換えます。</div>
+        </button>
+        <button id="btn-import-cancel" class="w-full mt-2 p-3 rounded-xl font-medium text-slate-600 hover:bg-slate-100 transition-colors text-center">
+          キャンセル
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Alert Modal -->
+  <div id="alert-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[70] items-center justify-center p-4 hidden animate-fade-in">
+    <div class="bg-white p-6 rounded-3xl shadow-xl max-w-sm w-full text-center animate-zoom-in">
+      <div class="mx-auto w-12 h-12 bg-amber-100 text-amber-500 rounded-full flex items-center justify-center mb-4">
+        <i data-lucide="alert-circle" class="w-7 h-7"></i>
+      </div>
+      <p id="alert-msg" class="text-slate-800 font-medium mb-6"></p>
+      <button id="btn-alert-ok" class="w-full py-2.5 bg-slate-900 text-white rounded-xl font-medium hover:bg-slate-800 transition-colors">
+        OK
+      </button>
+    </div>
+  </div>
+
+  <!-- Confirm Modal -->
+  <div id="confirm-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[70] items-center justify-center p-4 hidden animate-fade-in">
+    <div class="bg-white p-6 rounded-3xl shadow-xl max-w-sm w-full animate-zoom-in">
+      <h3 id="confirm-title" class="text-lg font-bold text-slate-800 mb-2"></h3>
+      <p id="confirm-msg" class="text-slate-600 text-sm mb-6"></p>
+      <div class="flex gap-3 justify-end">
+        <button id="btn-confirm-cancel" class="px-4 py-2 text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg font-medium transition-colors">
+          キャンセル
+        </button>
+        <button id="btn-confirm-ok" class="px-4 py-2 bg-red-600 text-white hover:bg-red-700 rounded-lg font-medium transition-colors shadow-sm">
+          削除する
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====================
+       JavaScript ロジック
+  ==================== -->
+  <script>
+    // --- 状態管理 ---
+    let apps = [];
+    let sortOption = 'date-asc';
+    let currentEditingAppId = null;
+    let currentImageUrl = '';
+    let importPendingData = null;
+    let confirmCallback = null;
+
+    // --- DOM要素 ---
+    const gridContainer = document.getElementById('app-grid');
+    const sortSelect = document.getElementById('sort-select');
+    const editorModal = document.getElementById('editor-modal');
+    
+    // --- ユーティリティ ---
+    const generateId = () => crypto.randomUUID();
+    const escapeHTML = (str) => {
+      return str.replace(/[&<>'"]/g, tag => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+      }[tag] || tag));
+    };
+
+    const getColorFromName = (name) => {
+      if (!name) return 'from-slate-500 to-slate-600';
+      const colors = [
+        'from-red-400 to-rose-600', 'from-orange-400 to-red-500', 'from-amber-400 to-orange-500',
+        'from-emerald-400 to-teal-600', 'from-cyan-400 to-blue-600', 'from-blue-500 to-indigo-600',
+        'from-violet-500 to-purple-600', 'from-fuchsia-400 to-pink-600'
+      ];
+      let hash = 0;
+      for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+      return colors[Math.abs(hash) % colors.length];
+    };
+
+    // --- 初期化 ---
+    function init() {
+      const savedData = localStorage.getItem('webapp_hub_data');
+      if (savedData) {
+        try { apps = JSON.parse(savedData); } catch (e) { console.error('Failed to parse apps'); }
+      }
+      const savedSort = localStorage.getItem('webapp_hub_sort');
+      if (savedSort) {
+        sortOption = savedSort;
+        sortSelect.value = sortOption;
+      }
+      
+      renderGrid();
+      lucide.createIcons();
+    }
+
+    function saveData() {
+      localStorage.setItem('webapp_hub_data', JSON.stringify(apps));
+      localStorage.setItem('webapp_hub_sort', sortOption);
+    }
+
+    // --- レンダリング ---
+    function renderGrid() {
+      // ソート処理
+      const sortedApps = [...apps].sort((a, b) => {
+        if (sortOption === 'name-asc') return a.name.localeCompare(b.name, 'ja');
+        if (sortOption === 'name-desc') return b.name.localeCompare(a.name, 'ja');
+        if (sortOption === 'date-asc') return (a.createdAt || 0) - (b.createdAt || 0);
+        if (sortOption === 'date-desc') return (b.createdAt || 0) - (a.createdAt || 0);
+        return 0;
+      });
+
+      gridContainer.innerHTML = '';
+
+      // 追加ボタン
+      const addBtn = document.createElement('button');
+      addBtn.className = "aspect-square flex flex-col items-center justify-center gap-4 rounded-3xl bg-slate-50 border-2 border-dashed border-slate-300 text-slate-500 hover:bg-white hover:border-indigo-400 hover:text-indigo-600 transition-all shadow-sm hover:shadow-md group";
+      addBtn.onclick = () => openEditor();
+      addBtn.innerHTML = `
+        <div class="w-16 h-16 rounded-2xl bg-slate-200/50 flex items-center justify-center group-hover:bg-indigo-100 group-hover:scale-110 transition-all duration-300">
+          <i data-lucide="plus" class="w-8 h-8" stroke-width="2.5"></i>
+        </div>
+        <span class="font-semibold text-sm">アプリを追加</span>
+      `;
+      gridContainer.appendChild(addBtn);
+
+      // アプリタイル
+      sortedApps.forEach(app => {
+        const tile = document.createElement('div');
+        tile.className = "aspect-square relative group rounded-3xl bg-white shadow-sm hover:shadow-xl border border-slate-200 transition-all duration-300 cursor-pointer flex flex-col items-center justify-center p-4 hover:-translate-y-1";
+        tile.onclick = () => runApp(app);
+
+        // アイコン部分の生成
+        let iconHtml = '';
+        if (app.imageUrl) {
+          iconHtml = `<img src="${escapeHTML(app.imageUrl)}" alt="${escapeHTML(app.name)}" class="w-full h-full object-cover" />`;
+        } else {
+          iconHtml = app.name.substring(0, 2).toUpperCase();
+        }
+        const bgClass = app.imageUrl ? 'bg-slate-100' : `bg-gradient-to-br ${getColorFromName(app.name)}`;
+
+        tile.innerHTML = `
+          <!-- Context Actions -->
+          <div class="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+            <button class="btn-edit p-2 bg-white/90 backdrop-blur rounded-xl text-slate-500 hover:text-blue-600 shadow-sm border border-slate-100 hover:bg-blue-50 transition-colors" title="編集">
+              <i data-lucide="edit" class="w-4 h-4"></i>
+            </button>
+            <button class="btn-delete p-2 bg-white/90 backdrop-blur rounded-xl text-slate-500 hover:text-red-600 shadow-sm border border-slate-100 hover:bg-red-50 transition-colors" title="削除">
+              <i data-lucide="trash-2" class="w-4 h-4"></i>
+            </button>
+          </div>
+
+          <!-- App Icon -->
+          <div class="w-20 h-20 rounded-2xl ${bgClass} text-white flex items-center justify-center text-3xl font-bold shadow-lg mb-4 group-hover:scale-105 transition-transform duration-300 ring-4 ring-white overflow-hidden">
+            ${iconHtml}
+          </div>
+          
+          <!-- App Name -->
+          <h3 class="font-semibold text-slate-800 text-center w-full truncate px-2">
+            ${escapeHTML(app.name)}
+          </h3>
+
+          <!-- Play Overlay Element -->
+          <div class="absolute inset-0 bg-gradient-to-t from-white via-white/80 to-transparent flex items-end justify-center pb-6 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none rounded-3xl">
+             <span class="flex items-center gap-1 text-sm font-bold text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-full shadow-sm transform translate-y-2 group-hover:translate-y-0 transition-transform duration-300">
+                <i data-lucide="play" class="w-3.5 h-3.5 fill-current"></i> 起動する
+             </span>
+          </div>
+        `;
+
+        // イベントの伝播を止めるための設定
+        const editBtn = tile.querySelector('.btn-edit');
+        const deleteBtn = tile.querySelector('.btn-delete');
+        
+        editBtn.onclick = (e) => { e.stopPropagation(); openEditor(app); };
+        deleteBtn.onclick = (e) => { e.stopPropagation(); requestDelete(app); };
+
+        gridContainer.appendChild(tile);
+      });
+
+      lucide.createIcons();
+    }
+
+    // --- エディタ関連 ---
+    const nameInput = document.getElementById('editor-name');
+    const htmlInput = document.getElementById('editor-html');
+    const urlInput = document.getElementById('editor-image-url');
+    const saveBtn = document.getElementById('btn-save-editor');
+
+    function openEditor(app = null) {
+      if (app) {
+        currentEditingAppId = app.id;
+        nameInput.value = app.name;
+        htmlInput.value = app.html;
+        currentImageUrl = app.imageUrl || '';
+        document.getElementById('editor-title').textContent = 'アプリを編集';
+      } else {
+        currentEditingAppId = null;
+        nameInput.value = '';
+        htmlInput.value = '<!DOCTYPE html>\n<html lang="ja">\n<head>\n  <meta charset="UTF-8">\n  <meta name="viewport" content="width=device-width, initial-scale=1.0">\n  <title>New App</title>\n  <style>\n    body { font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background-color: #f0f8ff; }\n    h1 { color: #333; }\n  </style>\n</head>\n<body>\n  <h1>Hello World!</h1>\n  <script>\n    // Your JavaScript here\n  <\/script>\n</body>\n</html>';
+        currentImageUrl = '';
+        document.getElementById('editor-title').textContent = '新規アプリを登録';
+      }
+      urlInput.value = currentImageUrl;
+      updateImagePreview();
+      validateEditor();
+      
+      editorModal.classList.remove('hidden');
+      editorModal.classList.add('flex');
+    }
+
+    function closeEditor() {
+      editorModal.classList.add('hidden');
+      editorModal.classList.remove('flex');
+    }
+
+    function updateImagePreview() {
+      const container = document.getElementById('editor-image-preview-container');
+      const clearBtn = document.getElementById('btn-clear-image');
+      if (currentImageUrl) {
+        container.innerHTML = `<img src="${escapeHTML(currentImageUrl)}" alt="Preview" class="w-full h-full object-cover" />`;
+        clearBtn.classList.remove('hidden');
+      } else {
+        container.innerHTML = `<i data-lucide="image" class="w-8 h-8 text-slate-300"></i>`;
+        clearBtn.classList.add('hidden');
+      }
+      lucide.createIcons({ root: container });
+    }
+
+    function validateEditor() {
+      const isValid = nameInput.value.trim() !== '' && htmlInput.value.trim() !== '';
+      saveBtn.disabled = !isValid;
+    }
+
+    nameInput.addEventListener('input', validateEditor);
+    htmlInput.addEventListener('input', validateEditor);
+    urlInput.addEventListener('input', (e) => {
+      currentImageUrl = e.target.value;
+      updateImagePreview();
+    });
+
+    document.getElementById('btn-save-editor').onclick = () => {
+      const name = nameInput.value.trim();
+      const html = htmlInput.value.trim();
+      if (!name || !html) return;
+
+      if (currentEditingAppId) {
+        apps = apps.map(a => a.id === currentEditingAppId ? { ...a, name, html, imageUrl: currentImageUrl } : a);
+      } else {
+        apps.push({
+          id: generateId(),
+          name,
+          html,
+          imageUrl: currentImageUrl,
+          createdAt: Date.now()
+        });
+      }
+      saveData();
+      renderGrid();
+      closeEditor();
+    };
+
+    document.getElementById('btn-cancel-editor').onclick = closeEditor;
+    document.getElementById('btn-close-editor').onclick = closeEditor;
+
+    // 画像アップロード処理
+    document.getElementById('btn-trigger-file').onclick = () => {
+      document.getElementById('editor-image-file').click();
+    };
+
+    document.getElementById('btn-clear-image').onclick = () => {
+      currentImageUrl = '';
+      urlInput.value = '';
+      updateImagePreview();
+    };
+
+    document.getElementById('editor-image-file').addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      if (!file.type.match('image.*')) {
+        showAlert('画像ファイルを選択してください。');
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const maxSize = 200;
+          let width = img.width;
+          let height = img.height;
+
+          if (width > height) {
+            if (width > maxSize) { height *= maxSize / width; width = maxSize; }
+          } else {
+            if (height > maxSize) { width *= maxSize / height; height = maxSize; }
+          }
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+          
+          currentImageUrl = canvas.toDataURL('image/webp', 0.8);
+          urlInput.value = currentImageUrl;
+          updateImagePreview();
+        };
+        img.src = event.target.result;
+      };
+      reader.readAsDataURL(file);
+      e.target.value = '';
+    });
+
+
+    // --- アプリ実行関連 ---
+    const runnerView = document.getElementById('runner-view');
+    const runnerIframe = document.getElementById('runner-iframe');
+    const runnerTitle = document.getElementById('runner-title');
+
+    function runApp(app) {
+      runnerTitle.textContent = app.name;
+      runnerIframe.srcdoc = app.html;
+      runnerView.classList.remove('hidden');
+      runnerView.classList.add('flex');
+    }
+
+    function closeApp() {
+      runnerView.classList.add('hidden');
+      runnerView.classList.remove('flex');
+      runnerIframe.srcdoc = ''; // メモリ解放
+    }
+
+    document.getElementById('btn-close-runner').onclick = closeApp;
+    document.getElementById('btn-close-runner-top').onclick = closeApp;
+
+
+    // --- モーダル (Alert / Confirm) ---
+    const alertModal = document.getElementById('alert-modal');
+    function showAlert(msg) {
+      document.getElementById('alert-msg').textContent = msg;
+      alertModal.classList.remove('hidden');
+      alertModal.classList.add('flex');
+    }
+    document.getElementById('btn-alert-ok').onclick = () => {
+      alertModal.classList.add('hidden');
+      alertModal.classList.remove('flex');
+    };
+
+    const confirmModal = document.getElementById('confirm-modal');
+    function showConfirm(title, msg, onConfirm) {
+      document.getElementById('confirm-title').textContent = title;
+      document.getElementById('confirm-msg').textContent = msg;
+      confirmCallback = onConfirm;
+      confirmModal.classList.remove('hidden');
+      confirmModal.classList.add('flex');
+    }
+    document.getElementById('btn-confirm-cancel').onclick = () => {
+      confirmModal.classList.add('hidden');
+      confirmModal.classList.remove('flex');
+      confirmCallback = null;
+    };
+    document.getElementById('btn-confirm-ok').onclick = () => {
+      if (confirmCallback) confirmCallback();
+      confirmModal.classList.add('hidden');
+      confirmModal.classList.remove('flex');
+      confirmCallback = null;
+    };
+
+    function requestDelete(app) {
+      showConfirm(
+        'アプリの削除',
+        `「${app.name}」を削除してもよろしいですか？この操作は元に戻せません。`,
+        () => {
+          apps = apps.filter(a => a.id !== app.id);
+          saveData();
+          renderGrid();
+        }
+      );
+    }
+
+
+    // --- インポート / エクスポート ---
+    document.getElementById('btn-export').onclick = () => {
+      if (apps.length === 0) {
+        showAlert('エクスポートするアプリがありません。');
+        return;
+      }
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(apps, null, 2));
+      const a = document.createElement('a');
+      a.href = dataStr;
+      a.download = `webapp_hub_backup_${new Date().toISOString().slice(0,10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    };
+
+    document.getElementById('btn-import').onclick = () => {
+      document.getElementById('import-file-input').click();
+    };
+
+    document.getElementById('import-file-input').addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        try {
+          const data = JSON.parse(event.target.result);
+          if (!Array.isArray(data)) throw new Error("Data is not an array");
+          
+          const isValid = data.every(item => item.id && item.name && typeof item.html === 'string');
+          if (!isValid) throw new Error("Invalid item format");
+
+          importPendingData = data;
+          document.getElementById('import-msg').textContent = `${data.length} 件のアプリデータが見つかりました。どのように読み込みますか？`;
+          document.getElementById('import-modal').classList.remove('hidden');
+          document.getElementById('import-modal').classList.add('flex');
+        } catch (err) {
+          showAlert('無効なJSONファイルです。正しいバックアップファイルを選択してください。');
+        }
+      };
+      reader.readAsText(file);
+      e.target.value = '';
+    });
+
+    const importModal = document.getElementById('import-modal');
+    function closeImportModal() {
+      importModal.classList.add('hidden');
+      importModal.classList.remove('flex');
+      importPendingData = null;
+    }
+
+    document.getElementById('btn-import-cancel').onclick = closeImportModal;
+    document.getElementById('btn-import-overwrite').onclick = () => {
+      if (importPendingData) {
+        apps = importPendingData;
+        saveData();
+        renderGrid();
+      }
+      closeImportModal();
+    };
+    document.getElementById('btn-import-append').onclick = () => {
+      if (importPendingData) {
+        const newApps = importPendingData.map(app => ({...app, id: generateId(), createdAt: Date.now()}));
+        apps = [...apps, ...newApps];
+        saveData();
+        renderGrid();
+      }
+      closeImportModal();
+    };
+
+    // --- ソート変更 ---
+    sortSelect.addEventListener('change', (e) => {
+      sortOption = e.target.value;
+      saveData();
+      renderGrid();
+    });
+
+    // 起動
+    init();
+  </script>
+</body>
+</html>
