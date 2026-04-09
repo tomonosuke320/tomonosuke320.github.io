@@ -101,9 +101,15 @@
         <div class="w-px h-6 bg-slate-700 hidden sm:block"></div>
         <span id="runner-title" class="font-bold text-lg truncate max-w-[200px] sm:max-w-md">AppName</span>
       </div>
-      <button id="btn-close-runner" class="p-2 hover:bg-slate-800 rounded-full transition-colors bg-slate-800/50" title="閉じる">
-        <i data-lucide="x" class="w-5 h-5"></i>
-      </button>
+      <div class="flex items-center gap-2">
+        <!-- 再読み込みボタン -->
+        <button id="btn-reload-runner" class="p-2 hover:bg-slate-800 rounded-full transition-colors text-slate-300 hover:text-white" title="再読み込み (F5)">
+          <i data-lucide="rotate-cw" class="w-5 h-5"></i>
+        </button>
+        <button id="btn-close-runner" class="p-2 hover:bg-slate-800 rounded-full transition-colors bg-slate-800/50" title="閉じる">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
     </div>
     
     <!-- Sandbox -->
@@ -543,8 +549,10 @@
     const runnerView = document.getElementById('runner-view');
     const runnerIframe = document.getElementById('runner-iframe');
     const runnerTitle = document.getElementById('runner-title');
+    let currentRunningApp = null; // 現在実行中のアプリを保持
 
     function runApp(app) {
+      currentRunningApp = app;
       runnerTitle.textContent = app.name;
       runnerIframe.srcdoc = app.html;
       runnerView.classList.remove('hidden');
@@ -552,13 +560,37 @@
     }
 
     function closeApp() {
+      currentRunningApp = null;
       runnerView.classList.add('hidden');
       runnerView.classList.remove('flex');
       runnerIframe.srcdoc = ''; // メモリ解放
     }
 
+    function reloadApp() {
+      if (currentRunningApp) {
+        // 一時的にsrcdocを空にして再描画を強制する
+        runnerIframe.srcdoc = '';
+        setTimeout(() => {
+          runnerIframe.srcdoc = currentRunningApp.html;
+        }, 50);
+      }
+    }
+
     document.getElementById('btn-close-runner').onclick = closeApp;
     document.getElementById('btn-close-runner-top').onclick = closeApp;
+    document.getElementById('btn-reload-runner').onclick = reloadApp;
+
+    // F5 または Ctrl+R / Cmd+R でのアプリ内リロード処理
+    window.addEventListener('keydown', (e) => {
+      const isReloadKey = (e.key === 'F5') || 
+                          (e.ctrlKey && e.key.toLowerCase() === 'r') || 
+                          (e.metaKey && e.key.toLowerCase() === 'r');
+                          
+      if (isReloadKey && currentRunningApp) {
+        e.preventDefault(); // ブラウザ全体のリロードをキャンセル
+        reloadApp();
+      }
+    });
 
 
     // --- モーダル (Alert / Confirm) ---
