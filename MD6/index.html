@@ -143,7 +143,10 @@
               <input type="text" id="editor-name" placeholder="例: ポモドーロタイマー" class="w-full px-4 py-3 bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all font-medium" />
             </div>
             <div>
-              <label class="block text-sm font-semibold text-slate-700 mb-2">アイコン画像 (任意)</label>
+              <label class="block text-sm font-semibold text-slate-700 mb-2 flex items-center">
+                アイコン画像 (任意)
+                <span class="text-xs font-normal text-slate-500 bg-slate-200/50 px-2 py-1 rounded-md ml-2 border border-slate-200">クリップボードからコピペ可</span>
+              </label>
               <div class="flex gap-4 items-start">
                 <div id="editor-image-preview-container" class="w-20 h-20 shrink-0 rounded-2xl bg-slate-100 border border-slate-200 overflow-hidden flex items-center justify-center shadow-inner">
                   <!-- JSで中身を切り替え -->
@@ -238,6 +241,13 @@
         </button>
       </div>
     </div>
+  </div>
+
+  <!-- D&D Overlay -->
+  <div id="drop-overlay" class="fixed inset-0 bg-indigo-600/95 z-[200] hidden flex-col items-center justify-center text-white border-8 border-indigo-400 border-dashed m-4 rounded-3xl pointer-events-none transition-opacity duration-200">
+    <i data-lucide="file-code" class="w-24 h-24 mb-4"></i>
+    <h2 class="text-3xl font-bold">HTMLファイルをドロップして追加</h2>
+    <p class="mt-4 text-indigo-100 font-medium">複数ファイルの同時追加も可能です</p>
   </div>
 
   <!-- ====================
@@ -473,9 +483,7 @@
       updateImagePreview();
     };
 
-    document.getElementById('editor-image-file').addEventListener('change', (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
+    function processImageFile(file) {
       if (!file.type.match('image.*')) {
         showAlert('画像ファイルを選択してください。');
         return;
@@ -507,7 +515,27 @@
         img.src = event.target.result;
       };
       reader.readAsDataURL(file);
+    }
+
+    document.getElementById('editor-image-file').addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      processImageFile(file);
       e.target.value = '';
+    });
+
+    // モーダル内での画像のペースト処理 (コピペ対応)
+    editorModal.addEventListener('paste', (e) => {
+      const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+      for (let index in items) {
+        const item = items[index];
+        if (item.kind === 'file' && item.type.startsWith('image/')) {
+          const file = item.getAsFile();
+          processImageFile(file);
+          e.preventDefault(); // デフォルトのペースト処理（テキストエリア等への入力）を防ぐ
+          break;
+        }
+      }
     });
 
 
@@ -653,6 +681,65 @@
       sortOption = e.target.value;
       saveData();
       renderGrid();
+    });
+
+    // --- ドラッグ＆ドロップによるHTMLファイル追加 ---
+    const dropOverlay = document.getElementById('drop-overlay');
+    let dragCounter = 0;
+
+    window.addEventListener('dragenter', (e) => {
+      e.preventDefault();
+      // ブラウザ外からのファイルドロップの場合のみ反応させる
+      if (e.dataTransfer.types.includes('Files')) {
+        dragCounter++;
+        dropOverlay.classList.remove('hidden');
+        dropOverlay.classList.add('flex');
+      }
+    });
+
+    window.addEventListener('dragover', (e) => {
+      e.preventDefault(); // ドロップを許可するために必須
+    });
+
+    window.addEventListener('dragleave', (e) => {
+      e.preventDefault();
+      dragCounter--;
+      if (dragCounter === 0) {
+        dropOverlay.classList.add('hidden');
+        dropOverlay.classList.remove('flex');
+      }
+    });
+
+    window.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dragCounter = 0;
+      dropOverlay.classList.add('hidden');
+      dropOverlay.classList.remove('flex');
+
+      const files = e.dataTransfer.files;
+      if (!files || files.length === 0) return;
+
+      Array.from(files).forEach(file => {
+        if (file.name.endsWith('.html') || file.type === 'text/html') {
+          const reader = new FileReader();
+          reader.onload = (event) => {
+            const htmlContent = event.target.result;
+            // 拡張子を除いたファイル名をアプリ名にする
+            let appName = file.name.replace(/\.html$/i, '');
+            
+            apps.push({
+              id: generateId(),
+              name: appName,
+              html: htmlContent,
+              imageUrl: '',
+              createdAt: Date.now()
+            });
+            saveData();
+            renderGrid();
+          };
+          reader.readAsText(file);
+        }
+      });
     });
 
     // 起動
